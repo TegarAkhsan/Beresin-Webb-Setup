@@ -11,10 +11,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\CheckBlacklist::class,
+            \App\Http\Middleware\ForceHttps::class,
         ])
             ->alias([
                 'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
@@ -40,7 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Custom Error Pages for Inertia
         $exceptions->render(function (\Throwable $e, \Illuminate\Http\Request $request) {
             $response = new \Symfony\Component\HttpFoundation\Response();
-            
+
             // Handle HTTP Exceptions (404, 403, 500, etc.)
             if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
                 $status = $e->getStatusCode();
@@ -50,7 +52,7 @@ return Application::configure(basePath: dirname(__DIR__))
                         ->setStatusCode($status);
                 }
             }
-            
+
             return null; // Default handling
         });
     })->create();

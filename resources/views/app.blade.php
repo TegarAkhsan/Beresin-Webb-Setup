@@ -9,8 +9,7 @@
         <!-- PWA Code -->
         <meta name="theme-color" content="#FFC107"/>
         <link rel="apple-touch-icon" href="/logo-192x192.png">
-        <link rel="manifest" href="/build/manifest.webmanifest"> 
-        {{-- In dev, this might be /manifest.webmanifest, but usually build/ is safe for prod --}}
+        <link rel="manifest" href="{{ asset('build/manifest.webmanifest') }}">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
