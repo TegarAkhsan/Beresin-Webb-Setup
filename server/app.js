@@ -29,7 +29,7 @@ const htmlTemplate = (page, viewData) => {
     let cssFile = '';
     let jsFile = '';
 
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = process.env.NODE_ENV === 'production' || !!process.env.NETLIFY;
 
     if (isProduction) {
         try {
