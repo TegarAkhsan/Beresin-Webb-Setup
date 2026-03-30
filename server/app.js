@@ -15,12 +15,18 @@ import adminRouter from './routes/admin.js';
 import jokiRouter from './routes/joki.js';
 
 if (!process.env.DATABASE_URL) {
-    console.error('CRITICAL: DATABASE_URL is not set in environment variables!');
+    console.warn('CRITICAL: DATABASE_URL is not set. Database operations will fail.');
 }
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({ 
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL?.includes('sslmode=require') ? { rejectUnauthorized: false } : false
+});
 const adapter = new PrismaPg(pool);
-export const prisma = new PrismaClient({ adapter });
+export const prisma = new PrismaClient({ 
+    adapter,
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error']
+});
 
 const app = express();
 
