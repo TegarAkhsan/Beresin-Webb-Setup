@@ -70,7 +70,7 @@ const htmlTemplate = (page, viewData) => {
     ${jsFile}
 </head>
 <body class="font-sans antialiased">
-    <div id="app" data-page='${JSON.stringify(page).replace(/'/g, "&#39;")}'></div>
+    <div id="app" data-page='${page}'></div>
 </body>
 </html>
     `;
