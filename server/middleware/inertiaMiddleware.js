@@ -79,6 +79,13 @@ export const isAdmin = (req, res, next) => {
     next();
 };
 
+export const isJoki = (req, res, next) => {
+    if (!req.user || req.user.role !== 'joki') {
+        return res.status(403).send('Forbidden: Joki access required');
+    }
+    next();
+};
+
 export const requireGuest = (req, res, next) => {
     if (req.user) {
         return res.redirect('/dashboard');

@@ -12,6 +12,7 @@ import authRouter from './routes/auth.js';
 import dashboardRouter from './routes/dashboard.js';
 import orderRouter from './routes/order.js';
 import adminRouter from './routes/admin.js';
+import jokiRouter from './routes/joki.js';
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
