@@ -31,8 +31,7 @@ export const shareInertiaData = async (req, res, next) => {
     // Assign to req object so other controllers can use `req.user`
     req.user = user;
 
-    // We inject a function that overrides res.inertia so we can always inject shared data
-    const originalInertia = res.inertia;
+    // Attach res.inertia function to use req.Inertia from inertia-node
     res.inertia = function(component, props = {}) {
         const sharedProps = {
             auth: {
@@ -54,7 +53,12 @@ export const shareInertiaData = async (req, res, next) => {
         if (req.cookies?.flash_error) res.clearCookie('flash_error');
         if (req.cookies?.flash_show_dashboard_prompt) res.clearCookie('flash_show_dashboard_prompt');
 
-        return originalInertia.call(res, component, sharedProps);
+        if (!req.Inertia) {
+            console.error('Inertia middleware not initialized properly');
+            return res.status(500).send('Inertia error');
+        }
+
+        return req.Inertia.render({ component, props: sharedProps });
     };
 
     next();
