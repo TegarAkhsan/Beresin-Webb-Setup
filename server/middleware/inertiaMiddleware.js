@@ -72,6 +72,13 @@ export const requireAuth = (req, res, next) => {
     next();
 };
 
+export const isAdmin = (req, res, next) => {
+    if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).send('Forbidden: Admin access required');
+    }
+    next();
+};
+
 export const requireGuest = (req, res, next) => {
     if (req.user) {
         return res.redirect('/dashboard');

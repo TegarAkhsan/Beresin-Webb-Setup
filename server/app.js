@@ -11,6 +11,7 @@ import { shareInertiaData } from './middleware/inertiaMiddleware.js';
 import authRouter from './routes/auth.js';
 import dashboardRouter from './routes/dashboard.js';
 import orderRouter from './routes/order.js';
+import adminRouter from './routes/admin.js';
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
