@@ -5,7 +5,7 @@
     "scripts": {
         "build": "vite build",
         "dev": "concurrently \"vite\" \"nodemon server.js\"",
-        "netlify-build": "rm -rf node_modules package-lock.json && npm install && npx prisma generate && npm run build"
+        "netlify-build": "rm -rf node_modules package-lock.json && npm install --include=dev && npx prisma generate && npm run build"
     },
     "devDependencies": {
         "@headlessui/react": "^2.0.0",
