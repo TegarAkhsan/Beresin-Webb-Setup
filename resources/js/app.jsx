@@ -7,8 +7,10 @@ import { createRoot } from 'react-dom/client';
 import { route } from 'ziggy-js';
 import { Ziggy } from './ziggy';
 
-window.Ziggy = Ziggy;
-window.route = (name, params, absolute, config) => route(name, params, absolute, config || Ziggy);
+// Priority for Ziggy: Use window.location.origin if it exists, otherwise fallback to imported Ziggy
+const ziggyUrl = typeof window !== 'undefined' ? window.location.origin : Ziggy.url;
+window.Ziggy = { ...Ziggy, url: ziggyUrl };
+window.route = (name, params, absolute, config) => route(name, params, absolute, config || window.Ziggy);
 import { registerSW } from 'virtual:pwa-register';
 
 // Register PWA Service Worker

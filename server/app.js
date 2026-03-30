@@ -69,6 +69,13 @@ const htmlTemplate = (page, viewData) => {
     <title>Beresin App (Serverless Node)</title>
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
     ${cssFile}
+    <script>
+        window.Ziggy = { 
+            url: (typeof window !== 'undefined' ? window.location.origin : ''), 
+            port: null, 
+            defaults: {} 
+        };
+    </script>
     ${jsFile}
 </head>
 <body class="font-sans antialiased">
