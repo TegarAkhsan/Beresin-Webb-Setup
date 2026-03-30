@@ -29,11 +29,16 @@ const htmlTemplate = (page, viewData) => {
     let cssFile = '';
     let jsFile = '';
 
-    const isProduction = process.env.NODE_ENV === 'production' || !!process.env.NETLIFY;
+    const manifestPath = path.join(process.cwd(), 'public', 'build', 'manifest.json');
+    let isProduction = fs.existsSync(manifestPath);
+
+    // Fallback to environment variables if filesystem check isn't conclusive
+    if (!isProduction) {
+        isProduction = process.env.NODE_ENV === 'production' || !!process.env.NETLIFY;
+    }
 
     if (isProduction) {
         try {
-            const manifestPath = path.join(process.cwd(), 'public', 'build', 'manifest.json');
             const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
             const appMetadata = manifest['resources/js/app.jsx'] || manifest['resources/js/app.tsx'] || manifest['resources/js/app.js'];
             
