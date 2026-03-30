@@ -5,13 +5,18 @@ import inertia from 'inertia-node';
 import path from 'path';
 import fs from 'fs';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 import { shareInertiaData } from './middleware/inertiaMiddleware.js';
 import authRouter from './routes/auth.js';
 import dashboardRouter from './routes/dashboard.js';
 import orderRouter from './routes/order.js';
 
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+export const prisma = new PrismaClient({ adapter });
+
 const app = express();
-export const prisma = new PrismaClient();
 
 app.use(cors());
 app.use(express.json());
