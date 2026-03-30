@@ -8,6 +8,11 @@
   included_files = ["public/build/manifest.json"]
 
 [[redirects]]
+  from = "/build/*"
+  to = "/build/:splat"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/.netlify/functions/server"
   status = 200
