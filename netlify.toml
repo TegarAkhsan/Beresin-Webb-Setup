@@ -1,37 +1,12 @@
 [build]
-  command = "npm run netlify-build"
+  command = "npm run build"
+  functions = "netlify/functions"
   publish = "public"
 
-[build.environment]
-  NODE_VERSION = "20"
-  PHP_VERSION = "8.2"
+[functions]
+  node_bundler = "esbuild"
 
-# Serve built assets statically from CDN
-[[redirects]]
-  from = "/build/*"
-  to = "/build/:splat"
-  status = 200
-
-# Proxy all other requests to the backend Laravel server
-# Force proxy for root to prevent Netlify from serving index.php statically
-[[redirects]]
-  from = "/"
-  to = "https://YOUR_LARAVEL_BACKEND_URL_HERE/"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/index.php"
-  to = "https://YOUR_LARAVEL_BACKEND_URL_HERE/index.php"
-  status = 200
-  force = true
-
-# Default proxy to backend for any route that doesn't correspond to a static file (e.g., /login, /dashboard)
-# Static assets in /public like /build, /images will be served by Netlify automatically
 [[redirects]]
   from = "/*"
-  to = "https://YOUR_LARAVEL_BACKEND_URL_HERE/:splat"
+  to = "/.netlify/functions/server"
   status = 200
-
-[dev]
-  command = "npm run dev"

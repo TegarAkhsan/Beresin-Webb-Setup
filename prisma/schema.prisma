@@ -1,0 +1,330 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model admin_withdrawals {
+  id                    Int       @id @default(autoincrement())
+  amount                Decimal
+  notes                 String?
+  created_at            DateTime?
+  updated_at            DateTime?
+  bank_details_snapshot String?
+}
+
+model cache {
+  key        String @id
+  value      String
+  expiration Int
+}
+
+model cache_locks {
+  key        String @id
+  owner      String
+  expiration Int
+}
+
+model chats {
+  id             Int                       @id @default(autoincrement())
+  user_id        Int
+  message        String
+  is_admin_reply Boolean @default(false)
+  is_read        Boolean @default(false)
+  created_at     DateTime?
+  updated_at     DateTime?
+  users          users                     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model failed_jobs {
+  id         Int      @id @default(autoincrement())
+  uuid       String   @unique(map: "failed_jobs_uuid_unique")
+  connection String
+  queue      String
+  payload    String
+  exception  String
+  failed_at  DateTime @default(now())
+}
+
+model job_batches {
+  id             String  @id
+  name           String
+  total_jobs     Int
+  pending_jobs   Int
+  failed_jobs    Int
+  failed_job_ids String
+  options        String?
+  cancelled_at   Int?
+  created_at     Int
+  finished_at    Int?
+}
+
+model jobs {
+  id           Int    @id @default(autoincrement())
+  queue        String
+  payload      String
+  attempts     Int
+  reserved_at  Int?
+  available_at Int
+  created_at   Int
+
+  @@index([queue], map: "jobs_queue_index")
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement())
+  migration String
+  batch     Int
+}
+
+model milestone_templates {
+  id           Int       @id @default(autoincrement())
+  service_id   Int
+  name         String
+  description  String?
+  weight       Int
+  sort_order   Int       @default(1)
+  requirements String?
+  created_at   DateTime?
+  updated_at   DateTime?
+  services     services  @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model order_chats {
+  id          Int                       @id @default(autoincrement())
+  order_id    Int
+  user_id     Int
+  message     String
+  is_resolved Boolean @default(false)
+  created_at  DateTime?
+  updated_at  DateTime?
+  users       users                     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orders      orders                    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model order_files {
+  id            Int       @id @default(autoincrement())
+  order_id      Int
+  file_path     String
+  version_label String
+  created_at    DateTime?
+  updated_at    DateTime?
+  note          String?
+  orders        orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model order_milestones {
+  id                Int       @id @default(autoincrement())
+  order_id          Int
+  name              String
+  description       String?
+  weight            Int
+  status            String    @default("pending")
+  file_path         String?
+  joki_notes        String?
+  admin_feedback    String?
+  admin_approved_at DateTime?
+  customer_feedback String?
+  completed_at      DateTime?
+  sort_order        Int       @default(1)
+  created_at        DateTime?
+  updated_at        DateTime?
+  version_label     String?
+  submitted_link    String?
+  orders            orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model orders {
+  id                          Int                       @id @default(autoincrement())
+  order_number                String                    @unique(map: "orders_order_number_unique")
+  user_id                     Int
+  package_id                  Int
+  joki_id                     Int?
+  description                 String
+  notes                       String?
+  deadline                    DateTime
+  amount                      Decimal
+  status                      String                    @default("pending_payment")
+  payment_proof               String?
+  payment_status              String                    @default("pending")
+  result_file                 String?
+  created_at                  DateTime?
+  updated_at                  DateTime?
+  invoice_number              String?
+  started_at                  DateTime?
+  completed_at                DateTime?
+  external_link               String?
+  reference_file              String?
+  previous_project_file       String?
+  joki_fee                    Decimal?
+  revision_reason             String?
+  payment_method              String?                   @default("qris")
+  revision_file               String?
+  revision_count              Int                       @default(0)
+  is_negotiation              Boolean @default(false)
+  student_card                String?
+  proposed_price              Decimal?
+  negotiation_deadline        DateTime?
+  selected_features           String?
+  base_price                  Decimal                   @default(0)
+  rush_fee                    Decimal                   @default(0)
+  platform_fee                Decimal                   @default(0)
+  additional_revision_fee     Decimal                   @default(0)
+  refund_amount               Decimal?
+  refund_status               String?
+  cancellation_reason         String?
+  refund_reason               String?
+  additional_payment_proof    String?
+  additional_payment_status   String                    @default("unpaid")
+  payout_request_id           Int?
+  order_chats                 order_chats[]
+  order_files                 order_files[]
+  order_milestones            order_milestones[]
+  payout_requests             payout_requests?          @relation(fields: [payout_request_id], references: [id], onUpdate: NoAction)
+  users_orders_user_idTousers users                     @relation("orders_user_idTousers", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  packages                    packages                  @relation(fields: [package_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_orders_joki_idTousers users?                    @relation("orders_joki_idTousers", fields: [joki_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reviews                     reviews[]
+}
+
+model package_addons {
+  id          Int                       @id @default(autoincrement())
+  package_id  Int
+  name        String
+  price       Decimal
+  description String?
+  is_active   Boolean @default(true)
+  created_at  DateTime?
+  updated_at  DateTime?
+  packages    packages                  @relation(fields: [package_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model packages {
+  id             Int                       @id @default(autoincrement())
+  service_id     Int
+  name           String
+  price          Decimal
+  description    String?
+  features       String?
+  created_at     DateTime?
+  updated_at     DateTime?
+  duration_days  Int                       @default(3)
+  joki_fee       Decimal                   @default(0)
+  max_revisions  Int                       @default(3)
+  is_negotiable  Boolean @default(false)
+  addon_features String?
+  orders         orders[]
+  package_addons package_addons[]
+  services       services                  @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model password_reset_tokens {
+  email      String    @id
+  token      String
+  created_at DateTime?
+}
+
+model payout_requests {
+  id                    Int       @id @default(autoincrement())
+  user_id               Int
+  amount                Decimal
+  status                String    @default("pending")
+  bank_details_snapshot String?
+  admin_note            String?
+  proof_file            String?
+  created_at            DateTime?
+  updated_at            DateTime?
+  orders                orders[]
+  users                 users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model push_subscriptions {
+  id                Int       @id @default(autoincrement())
+  subscribable_type String
+  subscribable_id   Int
+  endpoint          String    @unique(map: "push_subscriptions_endpoint_unique")
+  public_key        String?
+  auth_token        String?
+  content_encoding  String?
+  created_at        DateTime?
+  updated_at        DateTime?
+
+  @@index([subscribable_type, subscribable_id], map: "push_subscriptions_subscribable_morph_idx")
+}
+
+model reviews {
+  id         Int       @id @default(autoincrement())
+  order_id   Int
+  user_id    Int
+  rating     Int
+  comment    String?
+  created_at DateTime?
+  updated_at DateTime?
+  users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orders     orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model services {
+  id                  Int                   @id @default(autoincrement())
+  name                String
+  slug                String                @unique(map: "services_slug_unique")
+  description         String?
+  image               String?
+  created_at          DateTime?
+  updated_at          DateTime?
+  milestone_templates milestone_templates[]
+  packages            packages[]
+}
+
+model sessions {
+  id            String  @id
+  user_id       Int?
+  ip_address    String?
+  user_agent    String?
+  payload       String
+  last_activity Int
+
+  @@index([last_activity], map: "sessions_last_activity_index")
+  @@index([user_id], map: "sessions_user_id_index")
+}
+
+model settings {
+  id         Int       @id @default(autoincrement())
+  key        String    @unique(map: "settings_key_unique")
+  value      String?
+  created_at DateTime?
+  updated_at DateTime?
+}
+
+model users {
+  id                           Int                       @id @default(autoincrement())
+  name                         String
+  email                        String                    @unique(map: "users_email_unique")
+  email_verified_at            DateTime?
+  password                     String
+  role                         String                    @default("customer")
+  phone                        String?
+  bio                          String?
+  remember_token               String?
+  created_at                   DateTime?
+  updated_at                   DateTime?
+  address                      String?
+  university                   String?
+  profile_photo_path           String?
+  gender                       String?
+  referral_source              String?
+  specialization               String?
+  is_blacklisted               Boolean @default(false)
+  blacklist_reason             String?
+  bank_name                    String?
+  account_number               String?
+  account_holder               String?
+  chats                        chats[]
+  order_chats                  order_chats[]
+  orders_orders_user_idTousers orders[]                  @relation("orders_user_idTousers")
+  orders_orders_joki_idTousers orders[]                  @relation("orders_joki_idTousers")
+  payout_requests              payout_requests[]
+  reviews                      reviews[]
+}
