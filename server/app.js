@@ -179,7 +179,9 @@ app.use((err, req, res, next) => {
 
     if (isInertiaRequest) {
         res.cookie('flash_error', `Server Error: ${errorMessage}`);
-        return res.redirect('back');
+        const backUrl = req.get('Referer') || '/';
+        console.log(`[ERROR HANDLER] Redirecting back to: ${backUrl}`);
+        return res.redirect(backUrl);
     }
 
     res.status(500).json({
