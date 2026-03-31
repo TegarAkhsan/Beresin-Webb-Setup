@@ -1,8 +1,10 @@
 import { prisma } from '../app.js';
 
-// Helper to generate ORD-XXXXXXXXXX
-const generateOrderNumber = () => {
-    return 'ORD-' + Math.random().toString(36).substring(2, 12).toUpperCase();
+const generateOrderNumber = () => 'ORD-' + Math.random().toString(36).substring(2, 12).toUpperCase();
+
+const flashRedirect = (res, url, message, isError = false) => {
+    res.cookie(isError ? 'flash_error' : 'flash_success', message);
+    return res.redirect(url);
 };
 
 export const create = async (req, res) => {

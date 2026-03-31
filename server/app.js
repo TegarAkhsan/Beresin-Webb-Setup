@@ -119,6 +119,9 @@ app.use(shareInertiaData);
 app.use('/', authRouter);
 app.use('/', dashboardRouter);
 app.use('/', orderRouter);
+app.use('/', adminRouter);
+app.use('/', jokiRouter);
+
 
 // Sample Route to replace Laravel's /
 app.get('/', async (req, res) => {
