@@ -1,11 +1,15 @@
-import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 
 function createPrismaClient() {
-    const DATABASE_URL = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, '');
+    const DATABASE_URL = process.env.DATABASE_URL
+        ?.trim()
+        .replace(/^["']|["']$/g, '')
+        .replace(/&?channel_binding=\w+/g, '')
+        .replace(/\?&/, '?');
+
     if (!DATABASE_URL) throw new Error('DATABASE_URL is not set');
 
     const pool = new pg.Pool({
@@ -125,10 +129,13 @@ export async function runSeed() {
 }
 
 // ── Allow running directly with: node server/seed.js ─────────────────────────
-const isMain = process.argv[1]?.endsWith('seed.js');
+const isMain = process.argv[1] && process.argv[1].replace(/\\/g, '/').endsWith('server/seed.js');
 if (isMain) {
-    runSeed().catch(err => {
-        console.error('[SEED] ❌ Failed:', err);
-        process.exit(1);
+    // Load dotenv only when running directly from CLI
+    import('dotenv/config').then(() => {
+        runSeed().catch(err => {
+            console.error('[SEED] ❌ Failed:', err);
+            process.exit(1);
+        });
     });
 }

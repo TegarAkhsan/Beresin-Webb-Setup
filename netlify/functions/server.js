@@ -1,6 +1,5 @@
 import serverless from 'serverless-http';
-import app, { prisma } from '../../server/app.js';
-import { runSeed } from '../../server/seed.js';
+import app from '../../server/app.js';
 
 // Flag to ensure seed only runs once per cold start
 let seeded = false;
@@ -12,6 +11,8 @@ export const handler = async (event, context) => {
     if (!seeded && process.env.DATABASE_URL) {
         seeded = true; // set immediately to prevent concurrent runs
         try {
+            // Lazy import to avoid breaking the handler if seed.js has any issue
+            const { runSeed } = await import('../../server/seed.js');
             await runSeed();
         } catch (err) {
             console.error('[SEED ON STARTUP FAILED]', err.message);

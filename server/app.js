@@ -14,17 +14,24 @@ import orderRouter from './routes/order.js';
 import adminRouter from './routes/admin.js';
 import jokiRouter from './routes/joki.js';
 
-// Sanitize DATABASE_URL to remove any quotes or leading/trailing spaces
-const DATABASE_URL = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, '');
+// Sanitize DATABASE_URL: remove quotes/spaces and unsupported params (channel_binding)
+const DATABASE_URL = process.env.DATABASE_URL
+    ?.trim()
+    .replace(/^["']|["']$/g, '')          // strip surrounding quotes
+    .replace(/&?channel_binding=\w+/g, '') // pg lib doesn't support channel_binding
+    .replace(/\?&/, '?');                  // clean up any dangling ?& 
 
 if (!DATABASE_URL) {
     console.warn('CRITICAL: DATABASE_URL is not set. Database operations will fail.');
 }
 
+console.log('[DB] Connecting to:', DATABASE_URL?.split('@')[1]?.split('?')[0] ?? 'unknown'); // log host only, no credentials
+
 const pool = new pg.Pool({ 
     connectionString: DATABASE_URL,
     ssl: DATABASE_URL?.includes('sslmode=require') ? { rejectUnauthorized: false } : false
 });
+
 
 const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({ 
@@ -116,6 +123,7 @@ app.use('/', orderRouter);
 // Sample Route to replace Laravel's /
 app.get('/', async (req, res) => {
     try {
+        console.log('[WELCOME] Fetching services from DB...');
         const [services, settings] = await Promise.all([
             prisma.services.findMany({
                 include: {
@@ -127,6 +135,8 @@ app.get('/', async (req, res) => {
             }),
             prisma.settings.findMany()
         ]);
+
+        console.log(`[WELCOME] Found ${services.length} services, ${settings.length} settings`);
 
         // Convert settings array to key-value map
         const settingsMap = {};
@@ -140,7 +150,7 @@ app.get('/', async (req, res) => {
             footer_settings: settingsMap
         });
     } catch (error) {
-        console.error('[WELCOME ROUTE ERROR]', error);
+        console.error('[WELCOME ROUTE ERROR]', error.message, error.code);
         // Still render page even if DB fails, just with empty data
         res.inertia('Welcome', {
             canLogin: true,
@@ -151,6 +161,7 @@ app.get('/', async (req, res) => {
         });
     }
 });
+
 
 
 // GLOBAL ERROR HANDLER
