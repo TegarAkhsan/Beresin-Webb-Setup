@@ -14,14 +14,18 @@ import orderRouter from './routes/order.js';
 import adminRouter from './routes/admin.js';
 import jokiRouter from './routes/joki.js';
 
-if (!process.env.DATABASE_URL) {
+// Sanitize DATABASE_URL to remove any quotes or leading/trailing spaces
+const DATABASE_URL = process.env.DATABASE_URL?.trim().replace(/^["']|["']$/g, '');
+
+if (!DATABASE_URL) {
     console.warn('CRITICAL: DATABASE_URL is not set. Database operations will fail.');
 }
 
 const pool = new pg.Pool({ 
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('sslmode=require') ? { rejectUnauthorized: false } : false
+    connectionString: DATABASE_URL,
+    ssl: DATABASE_URL?.includes('sslmode=require') ? { rejectUnauthorized: false } : false
 });
+
 const adapter = new PrismaPg(pool);
 export const prisma = new PrismaClient({ 
     adapter,
@@ -127,10 +131,20 @@ app.use((err, req, res, next) => {
     if (res.headersSent) {
         return next(err);
     }
+
+    const isInertiaRequest = req.header('X-Inertia');
+    const errorMessage = process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message;
+
+    if (isInertiaRequest) {
+        res.cookie('flash_error', `Server Error: ${errorMessage}`);
+        return res.redirect('back');
+    }
+
     res.status(500).json({
         message: 'Internal Server Error',
         error: process.env.NODE_ENV === 'production' ? 'See Netlify Logs' : err.message
     });
 });
+
 
 export default app;

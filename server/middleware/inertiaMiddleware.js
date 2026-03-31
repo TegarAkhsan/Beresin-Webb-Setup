@@ -37,6 +37,7 @@ export const shareInertiaData = async (req, res, next) => {
             auth: {
                 user: user
             },
+            errors: JSON.parse(req.cookies?.errors || '{}'),
             flash: {
                 message: req.cookies?.flash_message || null,
                 success: req.cookies?.flash_success || null,
@@ -47,7 +48,8 @@ export const shareInertiaData = async (req, res, next) => {
             ...props
         };
 
-        // Clear flash cookies after sending them once
+        // Clear flash cookies and errors after sending them once
+        if (req.cookies?.errors) res.clearCookie('errors');
         if (req.cookies?.flash_message) res.clearCookie('flash_message');
         if (req.cookies?.flash_success) res.clearCookie('flash_success');
         if (req.cookies?.flash_error) res.clearCookie('flash_error');

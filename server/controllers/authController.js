@@ -8,13 +8,21 @@ export const register = async (req, res) => {
     try {
         const { name, email, password, password_confirmation } = req.body;
 
+        // Validation
+        if (!name || !email || !password) {
+            res.cookie('errors', JSON.stringify({ message: 'All fields are required.' }));
+            return res.redirect('back');
+        }
+
         if (password !== password_confirmation) {
-            return res.status(422).json({ errors: { password: ['The password confirmation does not match.'] } });
+            res.cookie('errors', JSON.stringify({ password: 'The password confirmation does not match.' }));
+            return res.redirect('back');
         }
 
         const existingUser = await prisma.users.findUnique({ where: { email } });
         if (existingUser) {
-            return res.status(422).json({ errors: { email: ['The email has already been taken.'] } });
+            res.cookie('errors', JSON.stringify({ email: 'The email has already been taken.' }));
+            return res.redirect('back');
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
@@ -34,13 +42,19 @@ export const register = async (req, res) => {
         
         res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
 
-        // Redirect is handled by client in Inertia, but Inertia-Node expects redirect back or intended
         return res.redirect('/dashboard'); 
     } catch (error) {
-        console.error('Registration Error', error);
-        return res.status(500).json({ message: 'Internal Server Error' });
+        console.error('[REGISTRATION ERROR DETAILS]', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code // Prisma error codes
+        });
+
+        res.cookie('flash_error', `Registration failed: ${error.message}`);
+        return res.redirect('back');
     }
 }
+
 
 export const login = async (req, res) => {
     try {
@@ -49,7 +63,8 @@ export const login = async (req, res) => {
         const user = await prisma.users.findUnique({ where: { email } });
         
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(422).json({ errors: { email: ['These credentials do not match our records.'] } });
+            res.cookie('errors', JSON.stringify({ email: 'These credentials do not match our records.' }));
+            return res.redirect('back');
         }
 
         const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
@@ -58,10 +73,15 @@ export const login = async (req, res) => {
 
         return res.redirect('/dashboard');
     } catch (error) {
-        console.error('Login Error', error);
-        return res.status(500).json({ message: 'Internal Server Error' });
+        console.error('[LOGIN ERROR DETAILS]', {
+            message: error.message,
+            stack: error.stack
+        });
+        res.cookie('flash_error', `Login failed: ${error.message}`);
+        return res.redirect('back');
     }
 }
+
 
 export const logout = (req, res) => {
     res.clearCookie('token');
