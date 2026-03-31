@@ -115,15 +115,43 @@ app.use('/', orderRouter);
 
 // Sample Route to replace Laravel's /
 app.get('/', async (req, res) => {
-    // res.inertia corresponds to Inertia::render
-    res.inertia('Welcome', {
-        canLogin: true,
-        canRegister: true,
-        services: [],
-        whatsapp_number: '',
-        footer_settings: {}
-    });
+    try {
+        const [services, settings] = await Promise.all([
+            prisma.services.findMany({
+                include: {
+                    packages: {
+                        orderBy: { price: 'asc' }
+                    }
+                },
+                orderBy: { id: 'asc' }
+            }),
+            prisma.settings.findMany()
+        ]);
+
+        // Convert settings array to key-value map
+        const settingsMap = {};
+        settings.forEach(s => { settingsMap[s.key] = s.value; });
+
+        res.inertia('Welcome', {
+            canLogin: true,
+            canRegister: true,
+            services,
+            whatsapp_number: settingsMap['whatsapp_number'] || '',
+            footer_settings: settingsMap
+        });
+    } catch (error) {
+        console.error('[WELCOME ROUTE ERROR]', error);
+        // Still render page even if DB fails, just with empty data
+        res.inertia('Welcome', {
+            canLogin: true,
+            canRegister: true,
+            services: [],
+            whatsapp_number: '',
+            footer_settings: {}
+        });
+    }
 });
+
 
 // GLOBAL ERROR HANDLER
 app.use((err, req, res, next) => {
