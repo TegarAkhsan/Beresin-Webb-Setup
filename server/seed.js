@@ -12,10 +12,19 @@ function createPrismaClient() {
 
     if (!DATABASE_URL) throw new Error('DATABASE_URL is not set');
 
+    const needsSSL = DATABASE_URL.includes('sslmode=require')
+        || DATABASE_URL.includes('supabase.com')
+        || DATABASE_URL.includes('supabase.co');
+
+    const cleanURL = DATABASE_URL.replace(/[?&]sslmode=\w+/g, '').replace(/\?&/, '?').replace(/[?]$/, '');
+
     const pool = new pg.Pool({
-        connectionString: DATABASE_URL,
-        ssl: DATABASE_URL.includes('sslmode=require') ? { rejectUnauthorized: false } : false,
+        connectionString: cleanURL,
+        ssl: needsSSL ? { rejectUnauthorized: false, checkServerIdentity: () => undefined } : false,
+        max: 1,
+        connectionTimeoutMillis: 10000,
     });
+
 
     const adapter = new PrismaPg(pool);
     const prisma = new PrismaClient({ adapter });

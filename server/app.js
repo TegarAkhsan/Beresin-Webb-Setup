@@ -14,22 +14,37 @@ import orderRouter from './routes/order.js';
 import adminRouter from './routes/admin.js';
 import jokiRouter from './routes/joki.js';
 
-// Sanitize DATABASE_URL: remove quotes/spaces and unsupported params (channel_binding)
+// Sanitize DATABASE_URL: strip quotes, whitespace, and unsupported params
 const DATABASE_URL = process.env.DATABASE_URL
     ?.trim()
-    .replace(/^["']|["']$/g, '')          // strip surrounding quotes
-    .replace(/&?channel_binding=\w+/g, '') // pg lib doesn't support channel_binding
-    .replace(/\?&/, '?');                  // clean up any dangling ?& 
+    .replace(/^["']|["']$/g, '')
+    .replace(/&?channel_binding=\w+/g, '')
+    .replace(/\?&/, '?');
 
 if (!DATABASE_URL) {
     console.warn('CRITICAL: DATABASE_URL is not set. Database operations will fail.');
+} else {
+    console.log('[DB] Connecting to:', DATABASE_URL.split('@')[1]?.split('?')[0] ?? 'unknown');
 }
 
-console.log('[DB] Connecting to:', DATABASE_URL?.split('@')[1]?.split('?')[0] ?? 'unknown'); // log host only, no credentials
+// SSL: Supabase always requires SSL (but doesn't include sslmode= in pooler URLs)
+const needsSSL = DATABASE_URL?.includes('sslmode=require')
+    || DATABASE_URL?.includes('supabase.com')
+    || DATABASE_URL?.includes('supabase.co');
 
-const pool = new pg.Pool({ 
-    connectionString: DATABASE_URL,
-    ssl: DATABASE_URL?.includes('sslmode=require') ? { rejectUnauthorized: false } : false
+// Strip sslmode from URL so pg doesn't conflict with our explicit ssl config
+const cleanURL = DATABASE_URL?.replace(/[?&]sslmode=\w+/g, '').replace(/\?&/, '?').replace(/[?]$/, '');
+
+const pool = new pg.Pool({
+    connectionString: cleanURL,
+    ssl: needsSSL ? { rejectUnauthorized: false, checkServerIdentity: () => undefined } : false,
+    max: 1,                    // Serverless: 1 connection per function instance
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+});
+
+pool.on('error', (err) => {
+    console.error('[PG POOL ERROR]', err.message);
 });
 
 
