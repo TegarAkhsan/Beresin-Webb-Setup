@@ -184,10 +184,15 @@ export const show = async (req, res) => {
         res.inertia('Orders/Show', {
             order: {
                 ...order,
-                package: order.packages,
+                package: {
+                    ...order.packages,
+                    service: order.packages?.services,     // ← map 'services' → 'service' for frontend
+                    price: Number(order.packages?.price),  // ensure numeric
+                },
                 joki: order.users_orders_joki_idTousers,
                 user: order.users_orders_user_idTousers,
-                milestones: order.order_milestones
+                milestones: order.order_milestones,
+                amount: Number(order.amount),
             },
             whatsapp_number: settings.whatsapp_number || null,
             qris_image: settings.qris_image || null,
@@ -195,6 +200,7 @@ export const show = async (req, res) => {
                 message: req.query.message || null
             }
         });
+
 
     } catch (error) {
         console.error('Order Show Error', error);

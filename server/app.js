@@ -137,6 +137,13 @@ app.use('/', orderRouter);
 app.use('/', adminRouter);
 app.use('/', jokiRouter);
 
+// Notification stub (prevents 404 polling errors from frontend)
+app.get('/notifications/check', (req, res) => {
+    res.json({ notifications: [], unread_count: 0 });
+});
+app.get('/notifications/check:suffix', (req, res) => {
+    res.json({ notifications: [], unread_count: 0 });
+});
 
 // Sample Route to replace Laravel's /
 app.get('/', async (req, res) => {

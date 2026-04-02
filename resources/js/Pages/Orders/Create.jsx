@@ -95,8 +95,9 @@ export default function Create({ auth, packages, selectedPackageId }) {
     useEffect(() => {
         if (!selectedPackage || !data.deadline) {
             setRushFee(0);
-            setTotalPrice(selectedPackage ? selectedPackage.price + 5000 : 0);
+            setTotalPrice(selectedPackage ? parseFloat(selectedPackage.price) + 5000 : 0);
             return;
+
         }
 
         if (selectedPackage.is_negotiable) {
@@ -152,7 +153,8 @@ export default function Create({ auth, packages, selectedPackageId }) {
         }
 
         setRushFee(fee);
-        setTotalPrice(selectedPackage.price + fee + 5000);
+        setTotalPrice(parseFloat(selectedPackage.price) + fee + 5000);
+
 
     }, [data.deadline, selectedPackage, data.selected_features]);
 
@@ -419,7 +421,8 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                             <>
                                                 <div className="flex justify-between items-center text-sm">
                                                     <span className="text-gray-500">Base Price</span>
-                                                    <span className="font-medium">Rp {new Intl.NumberFormat('id-ID').format(selectedPackage.price)}</span>
+                                                    <span className="font-medium">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(selectedPackage.price))}</span>
+
                                                 </div>
                                                 {rushFee > 0 && (
                                                     <div className="flex justify-between items-center text-sm text-amber-600 font-bold bg-amber-50 p-2 rounded">
