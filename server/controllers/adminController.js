@@ -93,12 +93,19 @@ export const verify = async (req, res) => {
             })
         ]);
 
+        const mapVerifyOrder = (o) => ({
+            ...serializeOrder(o),
+            user: o.users_orders_user_idTousers,
+            package: {
+                ...o.packages,
+                price: Number(o.packages?.price || 0),
+                service: o.packages?.services,
+                addons: o.packages?.package_addons || []
+            }
+        });
+
         res.inertia('Admin/Orders/Verify', {
-            orders: orders.map(o => ({
-                ...serializeOrder(o),
-                user: o.users_orders_user_idTousers,
-                package: { ...o.packages, price: Number(o.packages?.price || 0), service: o.packages?.services, addons: o.packages?.package_addons }
-            })),
+            orders: { data: orders.map(mapVerifyOrder) },
             additionalPaymentOrders: additionalPaymentOrders.map(o => ({
                 ...serializeOrder(o),
                 user: o.users_orders_user_idTousers,
@@ -110,6 +117,7 @@ export const verify = async (req, res) => {
         return flashRedirect(res, '/admin', 'Gagal memuat halaman verifikasi', true);
     }
 };
+
 
 export const approvePayment = async (req, res) => {
     const { id } = req.params;
@@ -127,14 +135,23 @@ export const approvePayment = async (req, res) => {
 
 // ─── Assign Orders ────────────────────────────────────────────────────────────
 export const assign = async (req, res) => {
+    const search = req.query.search || '';
     try {
+        // Build search filter
+        const searchWhere = search ? {
+            OR: [
+                { order_number: { contains: search, mode: 'insensitive' } },
+                { users_orders_user_idTousers: { name: { contains: search, mode: 'insensitive' } } }
+            ]
+        } : {};
+
         const [pendingOrders, assignedOrders, jokisRaw] = await Promise.all([
             prisma.orders.findMany({
-                where: { status: 'pending_assignment' },
+                where: { status: 'pending_assignment', ...searchWhere },
                 include: { users_orders_user_idTousers: true, packages: { include: { services: true } } }
             }),
             prisma.orders.findMany({
-                where: { status: { in: ['in_progress', 'review'] } },
+                where: { status: { in: ['in_progress', 'review'] }, ...searchWhere },
                 include: { users_orders_user_idTousers: true, packages: { include: { services: true } }, users_orders_joki_idTousers: true }
             }),
             prisma.users.findMany({
@@ -143,16 +160,24 @@ export const assign = async (req, res) => {
             })
         ]);
 
+        const mapOrder = (o) => ({
+            ...serializeOrder(o),
+            user: o.users_orders_user_idTousers,
+            package: { ...o.packages, price: Number(o.packages?.price || 0), service: o.packages?.services }
+        });
+
         res.inertia('Admin/Orders/Assign', {
-            orders: pendingOrders.map(o => ({ ...serializeOrder(o), user: o.users_orders_user_idTousers, package: { ...o.packages, price: Number(o.packages?.price || 0), service: o.packages?.services } })),
-            assignedOrders: assignedOrders.map(o => ({ ...serializeOrder(o), user: o.users_orders_user_idTousers, package: { ...o.packages, price: Number(o.packages?.price || 0), service: o.packages?.services }, joki: o.users_orders_joki_idTousers })),
-            jokis: jokisRaw.map(j => ({ ...j, jobs_count: j._count.orders_orders_joki_idTousers }))
+            orders: { data: pendingOrders.map(mapOrder) },
+            assignedOrders: { data: assignedOrders.map(o => ({ ...mapOrder(o), joki: o.users_orders_joki_idTousers })) },
+            jokis: jokisRaw.map(j => ({ ...j, jobs_count: j._count.orders_orders_joki_idTousers })),
+            filters: { search }
         });
     } catch (error) {
         console.error('[ADMIN ASSIGN ERROR]', error.message);
         return flashRedirect(res, '/admin', 'Gagal memuat halaman assign', true);
     }
 };
+
 
 export const storeAssignment = async (req, res) => {
     const { id } = req.params;

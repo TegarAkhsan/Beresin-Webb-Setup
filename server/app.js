@@ -146,6 +146,54 @@ app.get('/notifications/check:suffix', (req, res) => {
     res.json({ notifications: [], unread_count: 0 });
 });
 
+// Customer Chat API (used by ChatWidget.jsx)
+app.get('/chat', async (req, res) => {
+    try {
+        // requireAuth inline check
+        const token = req.cookies?.auth_token;
+        if (!token) return res.status(401).json([]);
+        const jwt = await import('jsonwebtoken');
+        const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'secret');
+        const messages = await prisma.chats.findMany({
+            where: { user_id: decoded.id },
+            orderBy: { created_at: 'asc' }
+        });
+        res.json(messages.map(m => ({
+            ...m,
+            created_at: m.created_at instanceof Date ? m.created_at.toISOString() : m.created_at
+        })));
+    } catch (e) {
+        console.error('[CHAT GET ERROR]', e.message);
+        res.status(401).json([]);
+    }
+});
+
+app.post('/chat', async (req, res) => {
+    try {
+        const token = req.cookies?.auth_token;
+        if (!token) return res.status(401).json({ error: 'Unauthorized' });
+        const jwt = await import('jsonwebtoken');
+        const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'secret');
+        const { message } = req.body;
+        if (!message?.trim()) return res.status(400).json({ error: 'Message required' });
+        const msg = await prisma.chats.create({
+            data: {
+                user_id: decoded.id,
+                message: message.trim(),
+                is_admin_reply: false,
+                created_at: new Date(),
+                updated_at: new Date()
+            }
+        });
+        res.json(msg);
+    } catch (e) {
+        console.error('[CHAT POST ERROR]', e.message);
+        res.status(500).json({ error: 'Failed to send message' });
+    }
+});
+
+
+
 // Sample Route to replace Laravel's /
 app.get('/', async (req, res) => {
     try {
