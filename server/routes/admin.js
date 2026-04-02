@@ -9,7 +9,8 @@ import {
     earnings
 } from '../controllers/adminController.js';
 import { requireAuth, isAdmin } from '../middleware/inertiaMiddleware.js';
-import { upload } from '../app.js';
+import { upload } from '../middleware/upload.js';
+
 
 
 const router = express.Router();

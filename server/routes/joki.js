@@ -1,7 +1,8 @@
 import express from 'express';
 import { index, startTask, uploadMilestone, finalizeOrder, requestPayout, updateBankDetails } from '../controllers/jokiDashboardController.js';
 import { requireAuth, isJoki } from '../middleware/inertiaMiddleware.js';
-import { upload } from '../app.js';
+import { upload } from '../middleware/upload.js';
+
 
 const router = express.Router();
 

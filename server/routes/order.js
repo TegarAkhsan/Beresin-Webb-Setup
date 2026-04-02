@@ -1,7 +1,8 @@
 import express from 'express';
 import { create, store, show, update, cancel } from '../controllers/orderController.js';
 import { requireAuth } from '../middleware/inertiaMiddleware.js';
-import { upload } from '../app.js';
+import { upload } from '../middleware/upload.js';
+
 
 const router = express.Router();
 

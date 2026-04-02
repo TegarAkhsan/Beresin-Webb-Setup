@@ -4,7 +4,6 @@ import cookieParser from 'cookie-parser';
 import inertia from 'inertia-node';
 import path from 'path';
 import fs from 'fs';
-import multer from 'multer';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
@@ -14,12 +13,6 @@ import dashboardRouter from './routes/dashboard.js';
 import orderRouter from './routes/order.js';
 import adminRouter from './routes/admin.js';
 import jokiRouter from './routes/joki.js';
-
-// Multer: memory storage for Netlify serverless file uploads
-export const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
-});
 
 
 // Sanitize DATABASE_URL: strip quotes, whitespace, and unsupported params
