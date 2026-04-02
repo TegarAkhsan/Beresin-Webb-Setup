@@ -1,14 +1,16 @@
 import express from 'express';
 import {
     index, verify, approvePayment, assign, storeAssignment, processPayout,
-    users, blacklistUser,
+    users, createUser, storeUser, editUser, updateUser, deleteUser, blacklistUser,
     services, storeService, editService, updateService, deleteService,
     settings, updateSettings,
     transactions,
-    chat, sendChatMessage,
+    chat, sendChatMessage, getChatMessages, sendChatReply,
     earnings
 } from '../controllers/adminController.js';
 import { requireAuth, isAdmin } from '../middleware/inertiaMiddleware.js';
+import { upload } from '../app.js';
+
 
 const router = express.Router();
 
@@ -26,6 +28,11 @@ router.post('/admin/payouts/:id/process', requireAuth, isAdmin, processPayout);
 
 // Users
 router.get('/admin/users', requireAuth, isAdmin, users);
+router.get('/admin/users/create', requireAuth, isAdmin, createUser);
+router.post('/admin/users', requireAuth, isAdmin, storeUser);
+router.get('/admin/users/:id/edit', requireAuth, isAdmin, editUser);
+router.post('/admin/users/:id', requireAuth, isAdmin, updateUser);
+router.post('/admin/users/:id/delete', requireAuth, isAdmin, deleteUser);
 router.post('/admin/users/:id/blacklist', requireAuth, isAdmin, blacklistUser);
 
 // Services
@@ -35,15 +42,20 @@ router.get('/admin/services/:id/edit', requireAuth, isAdmin, editService);
 router.post('/admin/services/:id', requireAuth, isAdmin, updateService);
 router.post('/admin/services/:id/delete', requireAuth, isAdmin, deleteService);
 
-// Settings
+// Settings — multer for file uploads (logo, qris)
 router.get('/admin/settings', requireAuth, isAdmin, settings);
-router.post('/admin/settings', requireAuth, isAdmin, updateSettings);
+router.post('/admin/settings', requireAuth, isAdmin,
+    upload.fields([{ name: 'invoice_logo', maxCount: 1 }, { name: 'qris_image', maxCount: 1 }]),
+    updateSettings
+);
 
 // Transactions
 router.get('/admin/transactions', requireAuth, isAdmin, transactions);
 
 // Chat
 router.get('/admin/chat', requireAuth, isAdmin, chat);
+router.get('/admin/chat/:userId', requireAuth, isAdmin, getChatMessages);
+router.post('/admin/chat/:userId/reply', requireAuth, isAdmin, sendChatReply);
 router.post('/admin/chat/send', requireAuth, isAdmin, sendChatMessage);
 
 // Earnings

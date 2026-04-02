@@ -1,8 +1,9 @@
 import { prisma } from '../app.js';
+import { uploadToStorage } from '../lib/storage.js';
 
 const calculateJokiCommission = (order) => {
-    const baseShare = parseFloat(order.base_price || 0) * 0.65;
-    const rushShare = parseFloat(order.rush_fee || 0) * 0.80;
+    const baseShare = Number(order.base_price || 0) * 0.65;
+    const rushShare = Number(order.rush_fee || 0) * 0.80;
     return baseShare + rushShare;
 };
 
@@ -10,6 +11,38 @@ const flashRedirect = (res, url, message, isError = false) => {
     res.cookie(isError ? 'flash_error' : 'flash_success', message);
     return res.redirect(url);
 };
+
+// Serialize Prisma DateTime fields to ISO strings
+const serializeOrder = (o) => ({
+    ...o,
+    amount: Number(o.amount || 0),
+    base_price: Number(o.base_price || 0),
+    rush_fee: Number(o.rush_fee || 0),
+    platform_fee: Number(o.platform_fee || 0),
+    joki_fee: Number(o.joki_fee || 0),
+    created_at: o.created_at instanceof Date ? o.created_at.toISOString() : (o.created_at || null),
+    updated_at: o.updated_at instanceof Date ? o.updated_at.toISOString() : (o.updated_at || null),
+    deadline: o.deadline instanceof Date ? o.deadline.toISOString() : (o.deadline || null),
+    completed_at: o.completed_at instanceof Date ? o.completed_at.toISOString() : null,
+    started_at: o.started_at instanceof Date ? o.started_at.toISOString() : null,
+});
+
+const mapOrder = (o) => ({
+    ...serializeOrder(o),
+    package: o.packages ? {
+        ...o.packages,
+        price: Number(o.packages.price || 0),
+        service: o.packages.services || null,
+    } : null,
+    user: o.users_orders_user_idTousers || null,
+    milestones: (o.order_milestones || []).map(m => ({
+        ...m,
+        created_at: m.created_at instanceof Date ? m.created_at.toISOString() : m.created_at,
+        completed_at: m.completed_at instanceof Date ? m.completed_at.toISOString() : null,
+    })),
+    joki_commission: calculateJokiCommission(o),
+    review: (o.reviews || [])[0] || null,
+});
 
 export const index = async (req, res) => {
     try {
@@ -22,7 +55,8 @@ export const index = async (req, res) => {
                 users_orders_user_idTousers: true,
                 order_milestones: { orderBy: { sort_order: 'asc' } },
                 reviews: true
-            }
+            },
+            orderBy: { created_at: 'desc' }
         });
 
         const upcomingTasks = allJobs.filter(o => !o.started_at && ['in_progress', 'pending_assignment'].includes(o.status));
@@ -39,14 +73,8 @@ export const index = async (req, res) => {
             orderBy: { created_at: 'desc' }
         });
 
-        const mapOrder = (o) => ({
-            ...o,
-            package: { ...o.packages, service: o.packages.services },
-            user: o.users_orders_user_idTousers,
-            milestones: o.order_milestones,
-            joki_commission: calculateJokiCommission(o),
-            review: o.reviews?.[0] || null
-        });
+        // Get full user details for bank info
+        const fullUser = await prisma.users.findUnique({ where: { id: user.id } });
 
         res.inertia('Dashboards/JokiDashboard', {
             upcomingTasks: upcomingTasks.map(mapOrder),
@@ -63,11 +91,15 @@ export const index = async (req, res) => {
                 available_balance: availableBalance,
                 pending_balance: heldEarnings,
                 available_orders: availableOrders.map(mapOrder),
-                payout_history: payoutHistory,
+                payout_history: payoutHistory.map(p => ({
+                    ...p,
+                    amount: Number(p.amount || 0),
+                    created_at: p.created_at instanceof Date ? p.created_at.toISOString() : p.created_at,
+                })),
                 bank_details: {
-                    bank_name: user.bank_name,
-                    account_number: user.account_number,
-                    account_holder: user.account_holder
+                    bank_name: fullUser?.bank_name || null,
+                    account_number: fullUser?.account_number || null,
+                    account_holder: fullUser?.account_holder || null
                 }
             }
         });
@@ -83,7 +115,7 @@ export const startTask = async (req, res) => {
     try {
         await prisma.orders.update({
             where: { id: parseInt(id) },
-            data: { started_at: new Date(), status: 'in_progress' }
+            data: { started_at: new Date(), status: 'in_progress', updated_at: new Date() }
         });
         return flashRedirect(res, '/joki/dashboard', 'Tugas berhasil dimulai');
     } catch (error) {
@@ -97,26 +129,35 @@ export const uploadMilestone = async (req, res) => {
     const { milestone_id, external_link, note } = req.body;
 
     try {
-        const milestone = await prisma.order_milestones.findUnique({
-            where: { id: parseInt(milestone_id) }
-        });
-
+        const milestone = await prisma.order_milestones.findUnique({ where: { id: parseInt(milestone_id) } });
         if (!milestone) return flashRedirect(res, '/joki/dashboard', 'Milestone tidak ditemukan', true);
+
+        let milestoneFileUrl = null;
+        if (req.file) {
+            const ext = req.file.originalname.split('.').pop();
+            const fileName = `milestones/order-${id}-milestone-${milestone_id}-${Date.now()}.${ext}`;
+            milestoneFileUrl = await uploadToStorage(req.file.buffer, 'beresin-uploads', fileName, req.file.mimetype);
+        }
 
         await prisma.order_milestones.update({
             where: { id: milestone.id },
-            data: { status: 'submitted', submitted_link: external_link, joki_notes: note, completed_at: new Date() }
+            data: {
+                status: 'submitted',
+                submitted_link: external_link || milestoneFileUrl || null,
+                joki_notes: note,
+                completed_at: new Date(),
+                updated_at: new Date()
+            }
         });
 
-        // Check if last milestone -> move order to review
+        // If last milestone → move order to review
         const nextMilestone = await prisma.order_milestones.findFirst({
             where: { order_id: parseInt(id), sort_order: { gt: milestone.sort_order } }
         });
-
         if (!nextMilestone) {
             await prisma.orders.update({
                 where: { id: parseInt(id) },
-                data: { status: 'review' }
+                data: { status: 'review', updated_at: new Date() }
             });
         }
 
@@ -132,7 +173,7 @@ export const finalizeOrder = async (req, res) => {
     try {
         await prisma.orders.update({
             where: { id: parseInt(id) },
-            data: { status: 'completed', completed_at: new Date() }
+            data: { status: 'completed', completed_at: new Date(), updated_at: new Date() }
         });
         return flashRedirect(res, '/joki/dashboard', 'Order berhasil diselesaikan');
     } catch (error) {
@@ -153,6 +194,7 @@ export const requestPayout = async (req, res) => {
         });
 
         const totalAmount = orders.reduce((sum, o) => sum + calculateJokiCommission(o), 0);
+        const fullUser = await prisma.users.findUnique({ where: { id: req.user.id } });
 
         const payout = await prisma.payout_requests.create({
             data: {
@@ -160,9 +202,9 @@ export const requestPayout = async (req, res) => {
                 amount: totalAmount,
                 status: 'pending',
                 bank_details_snapshot: JSON.stringify({
-                    bank_name: req.user.bank_name,
-                    account_number: req.user.account_number,
-                    account_holder: req.user.account_holder
+                    bank_name: fullUser?.bank_name || '',
+                    account_number: fullUser?.account_number || '',
+                    account_holder: fullUser?.account_holder || ''
                 }),
                 created_at: new Date(),
                 updated_at: new Date()
@@ -171,7 +213,7 @@ export const requestPayout = async (req, res) => {
 
         await prisma.orders.updateMany({
             where: { id: { in: order_ids.map(id => parseInt(id)) } },
-            data: { payout_request_id: payout.id }
+            data: { payout_request_id: payout.id, updated_at: new Date() }
         });
 
         return flashRedirect(res, '/joki/dashboard', 'Permintaan payout berhasil dikirim');
@@ -194,4 +236,3 @@ export const updateBankDetails = async (req, res) => {
         return flashRedirect(res, '/joki/dashboard', 'Gagal update informasi bank', true);
     }
 };
-

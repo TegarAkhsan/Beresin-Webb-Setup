@@ -1,4 +1,5 @@
 import { prisma } from '../app.js';
+import { uploadToStorage } from '../lib/storage.js';
 
 const generateOrderNumber = () => 'ORD-' + Math.random().toString(36).substring(2, 12).toUpperCase();
 
@@ -6,6 +7,22 @@ const flashRedirect = (res, url, message, isError = false) => {
     res.cookie(isError ? 'flash_error' : 'flash_success', message);
     return res.redirect(url);
 };
+
+// Helper: serialize Prisma order to JSON-safe object
+const serializeOrder = (order) => ({
+    ...order,
+    amount: Number(order.amount || 0),
+    base_price: Number(order.base_price || 0),
+    rush_fee: Number(order.rush_fee || 0),
+    platform_fee: Number(order.platform_fee || 0),
+    joki_fee: Number(order.joki_fee || 0),
+    additional_revision_fee: Number(order.additional_revision_fee || 0),
+    created_at: order.created_at instanceof Date ? order.created_at.toISOString() : (order.created_at ? new Date(order.created_at).toISOString() : new Date().toISOString()),
+    updated_at: order.updated_at instanceof Date ? order.updated_at.toISOString() : null,
+    deadline: order.deadline instanceof Date ? order.deadline.toISOString() : order.deadline,
+    completed_at: order.completed_at instanceof Date ? order.completed_at.toISOString() : null,
+    started_at: order.started_at instanceof Date ? order.started_at.toISOString() : null,
+});
 
 export const create = async (req, res) => {
     try {
@@ -18,9 +35,9 @@ export const create = async (req, res) => {
             }
         });
 
-        // Adapting Prisma output to React Frontend Expectations
         const formattedPackages = packages.map(pkg => ({
             ...pkg,
+            price: Number(pkg.price),
             service: pkg.services,
             addons: pkg.package_addons
         }));
@@ -37,43 +54,19 @@ export const create = async (req, res) => {
 
 export const store = async (req, res) => {
     const {
-        package_id,
-        payment_method,
-        name,
-        gender,
-        email,
-        phone,
-        address,
-        university,
-        referral_source,
-        description,
-        deadline,
-        notes,
-        external_link,
-        proposed_price,
-        selected_features
+        package_id, payment_method, name, gender, email,
+        phone, address, university, referral_source, description,
+        deadline, notes, external_link, proposed_price, selected_features
     } = req.body;
 
     try {
-        const pkg = await prisma.packages.findUnique({
-            where: { id: parseInt(package_id) }
-        });
+        const pkg = await prisma.packages.findUnique({ where: { id: parseInt(package_id) } });
+        if (!pkg) return res.status(404).send('Package not found');
 
-        if (!pkg) {
-            return res.status(404).send('Package not found');
-        }
-
-        // 1. Update User Profile (Laravel Auth::user()->update)
+        // Update User Profile
         await prisma.users.update({
             where: { id: req.user.id },
-            data: {
-                name,
-                phone,
-                address,
-                university,
-                referral_source,
-                gender
-            }
+            data: { name, phone, address, university, referral_source, gender, updated_at: new Date() }
         });
 
         let amount = 0;
@@ -85,10 +78,7 @@ export const store = async (req, res) => {
             amount = parseFloat(proposed_price);
             status = 'waiting_approval';
         } else {
-            // Standard Price Calculation
             amount = parseFloat(pkg.price);
-
-            // Rush Fee Logic (Laravel style)
             const standardDuration = pkg.duration_days || 3;
             const now = new Date();
             const standardDeadline = new Date(now.getTime() + standardDuration * 24 * 60 * 60 * 1000);
@@ -100,19 +90,17 @@ export const store = async (req, res) => {
                 rush_fee = diffDays * 25000;
                 amount += rush_fee;
             }
-
-            // Platform Fee
-            amount += 5000;
+            amount += 5000; // Platform fee
         }
 
-        // 2. Create Order
+        const now = new Date();
         const order = await prisma.orders.create({
             data: {
                 order_number: generateOrderNumber(),
                 user_id: req.user.id,
                 package_id: pkg.id,
-                amount: amount,
-                base_price: is_negotiation ? amount : pkg.price,
+                amount,
+                base_price: is_negotiation ? amount : parseFloat(pkg.price),
                 rush_fee: is_negotiation ? 0 : rush_fee,
                 platform_fee: is_negotiation ? 0 : 5000,
                 description: description || 'No description provided.',
@@ -120,19 +108,20 @@ export const store = async (req, res) => {
                 notes: notes || null,
                 external_link: external_link || null,
                 payment_method: payment_method,
-                status: status,
-                is_negotiation: is_negotiation,
+                status,
+                is_negotiation,
                 proposed_price: is_negotiation ? parseFloat(proposed_price) : null,
                 selected_features: is_negotiation ? JSON.stringify(selected_features || []) : null,
                 negotiation_deadline: is_negotiation ? new Date(deadline) : null,
+                created_at: now,
+                updated_at: now,
             }
         });
 
         const message = is_negotiation
-            ? 'Order proposal submitted! Waiting for admin approval for negotiation.'
+            ? 'Order proposal submitted! Waiting for admin approval.'
             : 'Order placed successfully! Please complete payment.';
 
-        // Redirect to show
         res.redirect(`/orders/${order.order_number}?message=${encodeURIComponent(message)}`);
 
     } catch (error) {
@@ -142,7 +131,7 @@ export const store = async (req, res) => {
 };
 
 export const show = async (req, res) => {
-    const { id } = req.params; // Using order_number as ID commonly in Laravel-style routes
+    const { id } = req.params;
 
     try {
         const order = await prisma.orders.findFirst({
@@ -153,54 +142,47 @@ export const show = async (req, res) => {
                 ]
             },
             include: {
-                packages: {
-                    include: { services: true }
-                },
+                packages: { include: { services: true } },
                 users_orders_joki_idTousers: true,
                 users_orders_user_idTousers: true,
-                order_milestones: {
-                    orderBy: { sort_order: 'asc' }
-                }
+                order_milestones: { orderBy: { sort_order: 'asc' } }
             }
         });
 
-        if (!order) {
-            return res.status(404).send('Order not found');
-        }
+        if (!order) return res.status(404).send('Order not found');
 
-        // Authorization check
         if (order.user_id !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'joki') {
             return res.status(403).send('Forbidden');
         }
 
-        // Fetch settings (WA number, QRIS)
         const settingsRaw = await prisma.settings.findMany({
-            where: {
-                key: { in: ['whatsapp_number', 'qris_image'] }
-            }
+            where: { key: { in: ['whatsapp_number', 'qris_image'] } }
         });
         const settings = settingsRaw.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
 
+        const serialized = serializeOrder(order);
+
         res.inertia('Orders/Show', {
             order: {
-                ...order,
+                ...serialized,
                 package: {
                     ...order.packages,
-                    service: order.packages?.services,     // ← map 'services' → 'service' for frontend
-                    price: Number(order.packages?.price),  // ensure numeric
+                    price: Number(order.packages?.price || 0),
+                    service: order.packages?.services,
                 },
                 joki: order.users_orders_joki_idTousers,
                 user: order.users_orders_user_idTousers,
-                milestones: order.order_milestones,
-                amount: Number(order.amount),
+                milestones: (order.order_milestones || []).map(m => ({
+                    ...m,
+                    created_at: m.created_at instanceof Date ? m.created_at.toISOString() : m.created_at,
+                    updated_at: m.updated_at instanceof Date ? m.updated_at.toISOString() : m.updated_at,
+                    completed_at: m.completed_at instanceof Date ? m.completed_at.toISOString() : null,
+                })),
             },
             whatsapp_number: settings.whatsapp_number || null,
             qris_image: settings.qris_image || null,
-            flash: {
-                message: req.query.message || null
-            }
+            flash: { message: req.query.message || null }
         });
-
 
     } catch (error) {
         console.error('Order Show Error', error);
@@ -213,25 +195,53 @@ export const update = async (req, res) => {
     const { action } = req.body;
 
     try {
-        const order = await prisma.orders.findUnique({
-             where: { id: parseInt(id) } 
+        const order = await prisma.orders.findFirst({
+            where: {
+                OR: [
+                    { order_number: id },
+                    { id: isNaN(parseInt(id)) ? -1 : parseInt(id) }
+                ]
+            }
         });
 
         if (!order) return res.status(404).send('Order not found');
 
-        // Confirm Payment logic
+        // --- Handle: Upload Payment Proof ---
+        if (req.file) {
+            try {
+                const ext = req.file.originalname.split('.').pop();
+                const fileName = `payment-proofs/${order.order_number}-${Date.now()}.${ext}`;
+                const publicUrl = await uploadToStorage(req.file.buffer, 'beresin-uploads', fileName, req.file.mimetype);
+
+                await prisma.orders.update({
+                    where: { id: order.id },
+                    data: {
+                        payment_proof: publicUrl,
+                        updated_at: new Date()
+                    }
+                });
+
+                return res.redirect(`/orders/${order.order_number}?message=Payment proof uploaded! Please confirm to notify admin.`);
+            } catch (uploadError) {
+                console.error('[UPLOAD ERROR]', uploadError.message);
+                return flashRedirect(res, `/orders/${order.order_number}`, 'Gagal upload bukti pembayaran: ' + uploadError.message, true);
+            }
+        }
+
+        // --- Handle: Confirm Payment ---
         if (action === 'confirm_payment') {
             await prisma.orders.update({
                 where: { id: order.id },
                 data: {
                     payment_status: 'pending_verification',
                     status: 'waiting_approval',
+                    updated_at: new Date()
                 }
             });
             return res.redirect(`/orders/${order.order_number}?message=Payment confirmed! Waiting for admin verification.`);
         }
 
-        res.status(400).send('Action not supported or file upload not yet configured.');
+        return res.status(400).send('Unknown action.');
 
     } catch (error) {
         console.error('Order Update Error', error);
@@ -241,9 +251,12 @@ export const update = async (req, res) => {
 
 export const cancel = async (req, res) => {
     const { id } = req.params;
-
     try {
-        const order = await prisma.orders.findUnique({ where: { id: parseInt(id) } });
+        const order = await prisma.orders.findFirst({
+            where: {
+                OR: [{ order_number: id }, { id: isNaN(parseInt(id)) ? -1 : parseInt(id) }]
+            }
+        });
 
         if (!order) return res.status(404).send('Order not found');
         if (order.status !== 'pending_payment') {
@@ -252,11 +265,10 @@ export const cancel = async (req, res) => {
 
         await prisma.orders.update({
             where: { id: order.id },
-            data: { status: 'cancelled' }
+            data: { status: 'cancelled', updated_at: new Date() }
         });
 
         res.redirect(`/orders/${order.order_number}?message=Order cancelled successfully.`);
-
     } catch (error) {
         console.error('Order Cancel Error', error);
         res.status(500).send('Internal Server Error');

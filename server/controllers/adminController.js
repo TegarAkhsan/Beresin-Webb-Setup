@@ -1,13 +1,41 @@
 import { prisma } from '../app.js';
+import { uploadToStorage } from '../lib/storage.js';
+import bcrypt from 'bcryptjs';
 
 const generateInvoiceNumber = () => 'INV-' + Math.random().toString(36).substring(2, 12).toUpperCase();
 
-// ─── Helper: flash redirect ────────────────────────────────────────────────────
 const flashRedirect = (res, url, message, isError = false) => {
     const cookieName = isError ? 'flash_error' : 'flash_success';
     res.cookie(cookieName, message);
     return res.redirect(url);
 };
+
+// Helper: serialize dates in order objects
+const serializeOrder = (o) => ({
+    ...o,
+    amount: Number(o.amount || 0),
+    base_price: Number(o.base_price || 0),
+    rush_fee: Number(o.rush_fee || 0),
+    platform_fee: Number(o.platform_fee || 0),
+    joki_fee: Number(o.joki_fee || 0),
+    created_at: o.created_at instanceof Date ? o.created_at.toISOString() : (o.created_at || null),
+    updated_at: o.updated_at instanceof Date ? o.updated_at.toISOString() : (o.updated_at || null),
+    deadline: o.deadline instanceof Date ? o.deadline.toISOString() : (o.deadline || null),
+    completed_at: o.completed_at instanceof Date ? o.completed_at.toISOString() : null,
+    started_at: o.started_at instanceof Date ? o.started_at.toISOString() : null,
+});
+
+// Build simple Laravel-style links for pagination
+function buildPaginatorLinks(total, perPage, page) {
+    const lastPage = Math.ceil(total / perPage) || 1;
+    const links = [];
+    links.push({ url: page > 1 ? `?page=${page - 1}` : null, label: '&laquo; Previous', active: false });
+    for (let i = 1; i <= lastPage; i++) {
+        links.push({ url: `?page=${i}`, label: String(i), active: i === page });
+    }
+    links.push({ url: page < lastPage ? `?page=${page + 1}` : null, label: 'Next &raquo;', active: false });
+    return links;
+}
 
 // ─── Admin Dashboard ─────────────────────────────────────────────────────────
 export const index = async (req, res) => {
@@ -28,8 +56,8 @@ export const index = async (req, res) => {
             })
         ]);
 
-        const revenueGross = completedOrders.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
-        const revenueOps = completedOrders.reduce((sum, o) => sum + (parseFloat(o.amount || 0) - parseFloat(o.joki_fee || 0)), 0);
+        const revenueGross = completedOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+        const revenueOps = completedOrders.reduce((sum, o) => sum + (Number(o.amount || 0) - Number(o.joki_fee || 0)), 0);
         const jokiWorkload = jokisRaw.map(j => ({ ...j, active_jobs_count: j._count.orders_orders_joki_idTousers }))
             .sort((a, b) => b.active_jobs_count - a.active_jobs_count);
 
@@ -37,7 +65,9 @@ export const index = async (req, res) => {
             stats: { total_orders: totalOrders, active_orders: activeOrders, revenue_gross: revenueGross, revenue_ops: revenueOps, total_jokis: totalJokis },
             joki_workload: jokiWorkload,
             payoutRequests: payoutRequestsRaw.map(p => ({
-                ...p, user: p.users,
+                ...p,
+                amount: Number(p.amount || 0),
+                user: p.users,
                 orders: p.orders.map(o => ({ ...o, package: o.packages }))
             }))
         });
@@ -64,8 +94,16 @@ export const verify = async (req, res) => {
         ]);
 
         res.inertia('Admin/Orders/Verify', {
-            orders: orders.map(o => ({ ...o, user: o.users_orders_user_idTousers, package: { ...o.packages, service: o.packages.services, addons: o.packages.package_addons } })),
-            additionalPaymentOrders: additionalPaymentOrders.map(o => ({ ...o, user: o.users_orders_user_idTousers, package: { ...o.packages, service: o.packages.services } }))
+            orders: orders.map(o => ({
+                ...serializeOrder(o),
+                user: o.users_orders_user_idTousers,
+                package: { ...o.packages, price: Number(o.packages?.price || 0), service: o.packages?.services, addons: o.packages?.package_addons }
+            })),
+            additionalPaymentOrders: additionalPaymentOrders.map(o => ({
+                ...serializeOrder(o),
+                user: o.users_orders_user_idTousers,
+                package: { ...o.packages, price: Number(o.packages?.price || 0), service: o.packages?.services }
+            }))
         });
     } catch (error) {
         console.error('[ADMIN VERIFY ERROR]', error.message);
@@ -78,7 +116,7 @@ export const approvePayment = async (req, res) => {
     try {
         await prisma.orders.update({
             where: { id: parseInt(id) },
-            data: { status: 'pending_assignment', payment_status: 'paid', invoice_number: generateInvoiceNumber() }
+            data: { status: 'pending_assignment', payment_status: 'paid', invoice_number: generateInvoiceNumber(), updated_at: new Date() }
         });
         return flashRedirect(res, '/admin/orders/verify', 'Pembayaran berhasil disetujui');
     } catch (error) {
@@ -106,8 +144,8 @@ export const assign = async (req, res) => {
         ]);
 
         res.inertia('Admin/Orders/Assign', {
-            orders: pendingOrders.map(o => ({ ...o, user: o.users_orders_user_idTousers, package: { ...o.packages, service: o.packages.services } })),
-            assignedOrders: assignedOrders.map(o => ({ ...o, user: o.users_orders_user_idTousers, package: { ...o.packages, service: o.packages.services }, joki: o.users_orders_joki_idTousers })),
+            orders: pendingOrders.map(o => ({ ...serializeOrder(o), user: o.users_orders_user_idTousers, package: { ...o.packages, price: Number(o.packages?.price || 0), service: o.packages?.services } })),
+            assignedOrders: assignedOrders.map(o => ({ ...serializeOrder(o), user: o.users_orders_user_idTousers, package: { ...o.packages, price: Number(o.packages?.price || 0), service: o.packages?.services }, joki: o.users_orders_joki_idTousers })),
             jokis: jokisRaw.map(j => ({ ...j, jobs_count: j._count.orders_orders_joki_idTousers }))
         });
     } catch (error) {
@@ -119,13 +157,11 @@ export const assign = async (req, res) => {
 export const storeAssignment = async (req, res) => {
     const { id } = req.params;
     const { joki_id, assignment_type } = req.body;
-
     try {
         const order = await prisma.orders.findUnique({ where: { id: parseInt(id) }, include: { packages: true } });
         if (!order) return flashRedirect(res, '/admin/orders/assign', 'Order tidak ditemukan', true);
 
         let targetJokiId = joki_id;
-
         if (assignment_type === 'auto') {
             const leastBusyJoki = await prisma.users.findFirst({
                 where: { role: 'joki' },
@@ -136,11 +172,10 @@ export const storeAssignment = async (req, res) => {
             targetJokiId = leastBusyJoki.id;
         }
 
-        const jokiFee = (parseFloat(order.base_price) * 0.65) + (parseFloat(order.rush_fee) * 0.80);
-
+        const jokiFee = (Number(order.base_price) * 0.65) + (Number(order.rush_fee) * 0.80);
         await prisma.orders.update({
             where: { id: order.id },
-            data: { joki_id: parseInt(targetJokiId), joki_fee: jokiFee, status: 'in_progress' }
+            data: { joki_id: parseInt(targetJokiId), joki_fee: jokiFee, status: 'in_progress', started_at: new Date(), updated_at: new Date() }
         });
 
         const templates = await prisma.milestone_templates.findMany({
@@ -154,7 +189,8 @@ export const storeAssignment = async (req, res) => {
                     order_id: order.id, name: t.name,
                     description: t.description || t.requirements,
                     weight: t.weight, sort_order: t.sort_order,
-                    status: t.sort_order === 1 ? 'in_progress' : 'pending'
+                    status: t.sort_order === 1 ? 'in_progress' : 'pending',
+                    created_at: new Date(), updated_at: new Date()
                 }))
             });
         }
@@ -172,7 +208,7 @@ export const processPayout = async (req, res) => {
     try {
         await prisma.payout_requests.update({
             where: { id: parseInt(id) },
-            data: { status: 'paid', admin_note: 'Paid via Admin Dashboard' }
+            data: { status: 'paid', admin_note: 'Paid via Admin Dashboard', updated_at: new Date() }
         });
         return flashRedirect(res, '/admin', 'Payout berhasil diproses');
     } catch (error) {
@@ -183,16 +219,36 @@ export const processPayout = async (req, res) => {
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 export const users = async (req, res) => {
+    const search = req.query.search || '';
+    const page   = parseInt(req.query.page || '1');
+    const perPage = 15;
+    const skip   = (page - 1) * perPage;
+
     try {
-        const allUsers = await prisma.users.findMany({
-            orderBy: { created_at: 'desc' },
-            include: {
-                _count: { select: { orders_orders_user_idTousers: true } }
-            }
-        });
+        const where = search
+            ? { OR: [{ name: { contains: search, mode: 'insensitive' } }, { email: { contains: search, mode: 'insensitive' } }] }
+            : {};
+
+        const [allUsers, total] = await Promise.all([
+            prisma.users.findMany({
+                where,
+                orderBy: { created_at: 'desc' },
+                include: { _count: { select: { orders_orders_user_idTousers: true } } },
+                skip,
+                take: perPage
+            }),
+            prisma.users.count({ where })
+        ]);
+
+        const data = allUsers.map(u => ({
+            ...u,
+            orders_count: u._count.orders_orders_user_idTousers,
+            created_at: u.created_at instanceof Date ? u.created_at.toISOString() : u.created_at,
+        }));
 
         res.inertia('Admin/Users/Index', {
-            users: allUsers.map(u => ({ ...u, orders_count: u._count.orders_orders_user_idTousers }))
+            users: { data, links: buildPaginatorLinks(total, perPage, page), total },
+            filters: { search }
         });
     } catch (error) {
         console.error('[ADMIN USERS ERROR]', error.message);
@@ -200,14 +256,66 @@ export const users = async (req, res) => {
     }
 };
 
+export const createUser = async (req, res) => {
+    res.inertia('Admin/Users/Create', {});
+};
+
+export const storeUser = async (req, res) => {
+    const { name, email, password, role } = req.body;
+    try {
+        const hashed = await bcrypt.hash(password, 10);
+        await prisma.users.create({
+            data: { name, email, password: hashed, role: role || 'customer', created_at: new Date(), updated_at: new Date() }
+        });
+        return flashRedirect(res, '/admin/users', 'User berhasil dibuat');
+    } catch (error) {
+        console.error('[CREATE USER ERROR]', error.message);
+        return flashRedirect(res, '/admin/users/create', 'Gagal membuat user: ' + error.message, true);
+    }
+};
+
+export const editUser = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const user = await prisma.users.findUnique({ where: { id: parseInt(id) } });
+        if (!user) return flashRedirect(res, '/admin/users', 'User tidak ditemukan', true);
+        res.inertia('Admin/Users/Edit', { user });
+    } catch (error) {
+        return flashRedirect(res, '/admin/users', 'Gagal memuat user', true);
+    }
+};
+
+export const updateUser = async (req, res) => {
+    const { id } = req.params;
+    const { name, email, role, password } = req.body;
+    try {
+        const data = { name, email, role, updated_at: new Date() };
+        if (password) data.password = await bcrypt.hash(password, 10);
+        await prisma.users.update({ where: { id: parseInt(id) }, data });
+        return flashRedirect(res, '/admin/users', 'User berhasil diupdate');
+    } catch (error) {
+        return flashRedirect(res, '/admin/users', 'Gagal update user: ' + error.message, true);
+    }
+};
+
+export const deleteUser = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await prisma.users.delete({ where: { id: parseInt(id) } });
+        return flashRedirect(res, '/admin/users', 'User berhasil dihapus');
+    } catch (error) {
+        return flashRedirect(res, '/admin/users', 'Gagal menghapus user: ' + error.message, true);
+    }
+};
+
 export const blacklistUser = async (req, res) => {
     const { id } = req.params;
-    const { reason } = req.body;
+    const { blacklist_reason } = req.body;
     try {
         const user = await prisma.users.findUnique({ where: { id: parseInt(id) } });
         await prisma.users.update({
             where: { id: parseInt(id) },
-            data: { is_blacklisted: !user.is_blacklisted, blacklist_reason: reason || null }
+            data: { is_blacklisted: !user.is_blacklisted, blacklist_reason: blacklist_reason || null, updated_at: new Date() }
         });
         return flashRedirect(res, '/admin/users', user.is_blacklisted ? 'User di-unblacklist' : 'User diblacklist');
     } catch (error) {
@@ -258,7 +366,6 @@ export const editService = async (req, res) => {
         if (!service) return flashRedirect(res, '/admin/services', 'Service tidak ditemukan', true);
         res.inertia('Admin/Services/Edit', { service });
     } catch (error) {
-        console.error('[EDIT SERVICE ERROR]', error.message);
         return flashRedirect(res, '/admin/services', 'Gagal memuat service', true);
     }
 };
@@ -273,7 +380,6 @@ export const updateService = async (req, res) => {
         });
         return flashRedirect(res, '/admin/services', 'Service berhasil diupdate');
     } catch (error) {
-        console.error('[UPDATE SERVICE ERROR]', error.message);
         return flashRedirect(res, '/admin/services', 'Gagal update service', true);
     }
 };
@@ -284,7 +390,6 @@ export const deleteService = async (req, res) => {
         await prisma.services.delete({ where: { id: parseInt(id) } });
         return flashRedirect(res, '/admin/services', 'Service berhasil dihapus');
     } catch (error) {
-        console.error('[DELETE SERVICE ERROR]', error.message);
         return flashRedirect(res, '/admin/services', 'Gagal menghapus service', true);
     }
 };
@@ -302,42 +407,83 @@ export const settings = async (req, res) => {
 };
 
 export const updateSettings = async (req, res) => {
-    const { settings: settingsData } = req.body; // { key: value, ... }
     try {
-        const entries = Object.entries(settingsData || req.body);
-        for (const [key, value] of entries) {
-            await prisma.settings.upsert({
-                where: { key },
-                update: { value: String(value) },
-                create: { key, value: String(value) }
-            });
+        // Save text fields
+        const textFields = ['invoice_name', 'invoice_address', 'whatsapp_number'];
+        for (const field of textFields) {
+            if (req.body[field] !== undefined) {
+                await prisma.settings.upsert({
+                    where: { key: field },
+                    update: { value: String(req.body[field]) },
+                    create: { key: field, value: String(req.body[field]) }
+                });
+            }
         }
+
+        // Handle file uploads (multer fields)
+        const fileFields = ['invoice_logo', 'qris_image'];
+        for (const field of fileFields) {
+            const file = req.files?.[field]?.[0];
+            if (file) {
+                const ext = file.originalname.split('.').pop();
+                const fileName = `settings/${field}-${Date.now()}.${ext}`;
+                const publicUrl = await uploadToStorage(file.buffer, 'beresin-uploads', fileName, file.mimetype);
+                await prisma.settings.upsert({
+                    where: { key: field },
+                    update: { value: publicUrl },
+                    create: { key: field, value: publicUrl }
+                });
+            }
+        }
+
         return flashRedirect(res, '/admin/settings', 'Settings berhasil diupdate');
     } catch (error) {
         console.error('[UPDATE SETTINGS ERROR]', error.message);
-        return flashRedirect(res, '/admin/settings', 'Gagal update settings', true);
+        return flashRedirect(res, '/admin/settings', 'Gagal update settings: ' + error.message, true);
     }
 };
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
 export const transactions = async (req, res) => {
+    const { start_date, end_date, service_id } = req.query;
+    const page = parseInt(req.query.page || '1');
+    const perPage = 20;
+
     try {
-        const allOrders = await prisma.orders.findMany({
-            include: {
-                users_orders_user_idTousers: true,
-                packages: { include: { services: true } },
-                users_orders_joki_idTousers: true
-            },
-            orderBy: { created_at: 'desc' }
-        });
+        const where = { payment_status: 'paid' };
+        if (start_date) where.created_at = { ...(where.created_at || {}), gte: new Date(start_date) };
+        if (end_date)   where.created_at = { ...(where.created_at || {}), lte: new Date(end_date + 'T23:59:59') };
+        if (service_id) where.packages = { service_id: parseInt(service_id) };
+
+        const [allOrders, total, allServices] = await Promise.all([
+            prisma.orders.findMany({
+                where,
+                include: {
+                    users_orders_user_idTousers: true,
+                    packages: { include: { services: true } },
+                    users_orders_joki_idTousers: true
+                },
+                orderBy: { created_at: 'desc' },
+                skip: (page - 1) * perPage,
+                take: perPage
+            }),
+            prisma.orders.count({ where }),
+            prisma.services.findMany({ orderBy: { id: 'asc' } })
+        ]);
 
         res.inertia('Admin/Transactions/Index', {
-            orders: allOrders.map(o => ({
-                ...o,
-                user: o.users_orders_user_idTousers,
-                package: { ...o.packages, service: o.packages.services },
-                joki: o.users_orders_joki_idTousers
-            }))
+            orders: {
+                data: allOrders.map(o => ({
+                    ...serializeOrder(o),
+                    user: o.users_orders_user_idTousers,
+                    package: { ...o.packages, price: Number(o.packages?.price || 0), service: o.packages?.services },
+                    joki: o.users_orders_joki_idTousers
+                })),
+                links: buildPaginatorLinks(total, perPage, page),
+                total
+            },
+            services: allServices,
+            filters: { start_date: start_date || '', end_date: end_date || '', service_id: service_id || '' }
         });
     } catch (error) {
         console.error('[ADMIN TRANSACTIONS ERROR]', error.message);
@@ -348,29 +494,63 @@ export const transactions = async (req, res) => {
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 export const chat = async (req, res) => {
     try {
-        // Get all users who have sent messages
-        const chats = await prisma.chats.findMany({
-            include: { users: { select: { id: true, name: true, email: true, role: true } } },
-            orderBy: { created_at: 'desc' },
-            take: 200
-        });
-
-        // Group by user
-        const chatsByUser = {};
-        chats.forEach(msg => {
-            const uid = msg.user_id;
-            if (!chatsByUser[uid]) {
-                chatsByUser[uid] = { user: msg.users, messages: [] };
+        const usersWithChats = await prisma.users.findMany({
+            where: { role: 'customer', chats: { some: {} } },
+            include: {
+                chats: {
+                    orderBy: { created_at: 'desc' },
+                    take: 1
+                },
+                _count: {
+                    select: { chats: { where: { is_admin_reply: false } } }
+                }
             }
-            chatsByUser[uid].messages.push(msg);
         });
 
-        res.inertia('Admin/Chat/Index', {
-            chatsByUser: Object.values(chatsByUser)
-        });
+        const conversations = usersWithChats.map(u => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            last_message: u.chats[0] ? {
+                message: u.chats[0].message,
+                created_at: u.chats[0].created_at instanceof Date ? u.chats[0].created_at.toISOString() : u.chats[0].created_at
+            } : null,
+            unread_count: u._count.chats || 0
+        }));
+
+        res.inertia('Admin/Chat/Index', { conversations });
     } catch (error) {
         console.error('[ADMIN CHAT ERROR]', error.message);
         return flashRedirect(res, '/admin', 'Gagal memuat chat', true);
+    }
+};
+
+export const getChatMessages = async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const messages = await prisma.chats.findMany({
+            where: { user_id: parseInt(userId) },
+            orderBy: { created_at: 'asc' }
+        });
+        res.json(messages.map(m => ({
+            ...m,
+            created_at: m.created_at instanceof Date ? m.created_at.toISOString() : m.created_at
+        })));
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to load messages' });
+    }
+};
+
+export const sendChatReply = async (req, res) => {
+    const { userId } = req.params;
+    const { message } = req.body;
+    try {
+        const msg = await prisma.chats.create({
+            data: { user_id: parseInt(userId), message, is_admin_reply: true, created_at: new Date(), updated_at: new Date() }
+        });
+        res.json(msg);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to send message' });
     }
 };
 
@@ -378,17 +558,10 @@ export const sendChatMessage = async (req, res) => {
     const { user_id, message } = req.body;
     try {
         await prisma.chats.create({
-            data: {
-                user_id: parseInt(user_id),
-                message,
-                is_admin_reply: true,
-                created_at: new Date(),
-                updated_at: new Date()
-            }
+            data: { user_id: parseInt(user_id), message, is_admin_reply: true, created_at: new Date(), updated_at: new Date() }
         });
         return flashRedirect(res, '/admin/chat', 'Pesan terkirim');
     } catch (error) {
-        console.error('[SEND CHAT ERROR]', error.message);
         return flashRedirect(res, '/admin/chat', 'Gagal mengirim pesan', true);
     }
 };
@@ -402,26 +575,45 @@ export const earnings = async (req, res) => {
             orderBy: { completed_at: 'desc' }
         });
 
-        const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
-        const totalJokiFees = completedOrders.reduce((sum, o) => sum + parseFloat(o.joki_fee || 0), 0);
-        const platformRevenue = totalRevenue - totalJokiFees;
+        const totalEarnings = completedOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+        const totalJokiFees = completedOrders.reduce((sum, o) => sum + Number(o.joki_fee || 0), 0);
+        const platformRevenue = totalEarnings - totalJokiFees;
 
-        const withdrawals = await prisma.admin_withdrawals.findMany({
-            orderBy: { created_at: 'desc' }
+        const withdrawalRecords = await prisma.admin_withdrawals.findMany({ orderBy: { created_at: 'desc' } });
+        const totalWithdrawn = withdrawalRecords.reduce((sum, w) => sum + Number(w.amount || 0), 0);
+
+        // Bank details from settings
+        const bankSettings = await prisma.settings.findMany({
+            where: { key: { in: ['bank_name', 'account_number', 'account_holder'] } }
         });
+        const bank_details = bankSettings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {});
 
-        const totalWithdrawn = withdrawals.reduce((sum, w) => sum + parseFloat(w.amount || 0), 0);
+        // Build history array
+        const history = [
+            ...completedOrders.map(o => ({
+                id: `order-${o.id}`,
+                date: o.completed_at ? new Date(o.completed_at).toLocaleDateString('id-ID') : '-',
+                order_number: o.order_number,
+                type: 'income',
+                source: o.packages?.services?.name ? `${o.packages.services.name} — Platform fee` : 'Order',
+                amount: Number(o.platform_fee || 5000)
+            })),
+            ...withdrawalRecords.map(w => ({
+                id: `withdraw-${w.id}`,
+                date: w.created_at ? new Date(w.created_at).toLocaleDateString('id-ID') : '-',
+                order_number: w.reference || `WD-${w.id}`,
+                type: 'withdrawal',
+                source: w.notes || 'Withdrawal',
+                amount: Number(w.amount || 0)
+            }))
+        ].sort((a, b) => (a.date > b.date ? -1 : 1));
 
         res.inertia('Admin/Earnings', {
-            stats: {
-                total_revenue: totalRevenue,
-                total_joki_fees: totalJokiFees,
-                platform_revenue: platformRevenue,
-                total_withdrawn: totalWithdrawn,
-                available_balance: platformRevenue - totalWithdrawn
-            },
-            orders: completedOrders.map(o => ({ ...o, package: { ...o.packages, service: o.packages.services } })),
-            withdrawals
+            totalEarnings: platformRevenue,
+            totalWithdrawn,
+            availableBalance: platformRevenue - totalWithdrawn,
+            history,
+            bank_details
         });
     } catch (error) {
         console.error('[ADMIN EARNINGS ERROR]', error.message);
