@@ -61,12 +61,23 @@ export const store = async (req, res) => {
 
     try {
         const pkg = await prisma.packages.findUnique({ where: { id: parseInt(package_id) } });
-        if (!pkg) return res.status(404).send('Package not found');
+        if (!pkg) {
+            res.cookie('flash_error', 'Package not found.');
+            return res.redirect('/orders/create' + (package_id ? `?package_id=${package_id}` : ''));
+        }
 
-        // Update User Profile
+        // Update User Profile (only non-null fields to avoid overwriting existing data)
+        const profileUpdate = { updated_at: new Date() };
+        if (name) profileUpdate.name = name;
+        if (phone) profileUpdate.phone = phone;
+        if (address) profileUpdate.address = address;
+        if (university) profileUpdate.university = university;
+        if (referral_source) profileUpdate.referral_source = referral_source;
+        if (gender) profileUpdate.gender = gender;
+
         await prisma.users.update({
             where: { id: req.user.id },
-            data: { name, phone, address, university, referral_source, gender, updated_at: new Date() }
+            data: profileUpdate
         });
 
         let amount = 0;
@@ -75,7 +86,7 @@ export const store = async (req, res) => {
         const is_negotiation = pkg.is_negotiable;
 
         if (is_negotiation) {
-            amount = parseFloat(proposed_price);
+            amount = parseFloat(proposed_price) || 0;
             status = 'waiting_approval';
         } else {
             amount = parseFloat(pkg.price);
@@ -93,6 +104,37 @@ export const store = async (req, res) => {
             amount += 5000; // Platform fee
         }
 
+        // Handle optional file uploads (from upload.fields middleware)
+        let referenceFileUrl = null;
+        let previousProjectFileUrl = null;
+        let studentCardUrl = null;
+
+        try {
+            if (req.files) {
+                if (req.files['reference_file']?.[0]) {
+                    const f = req.files['reference_file'][0];
+                    const ext = f.originalname.split('.').pop();
+                    const fileName = `orders/reference-${req.user.id}-${Date.now()}.${ext}`;
+                    referenceFileUrl = await uploadToStorage(f.buffer, 'beresin-uploads', fileName, f.mimetype);
+                }
+                if (req.files['previous_project_file']?.[0]) {
+                    const f = req.files['previous_project_file'][0];
+                    const ext = f.originalname.split('.').pop();
+                    const fileName = `orders/previous-${req.user.id}-${Date.now()}.${ext}`;
+                    previousProjectFileUrl = await uploadToStorage(f.buffer, 'beresin-uploads', fileName, f.mimetype);
+                }
+                if (req.files['student_card']?.[0]) {
+                    const f = req.files['student_card'][0];
+                    const ext = f.originalname.split('.').pop();
+                    const fileName = `orders/student-card-${req.user.id}-${Date.now()}.${ext}`;
+                    studentCardUrl = await uploadToStorage(f.buffer, 'beresin-uploads', fileName, f.mimetype);
+                }
+            }
+        } catch (uploadError) {
+            console.error('[ORDER FILE UPLOAD ERROR]', uploadError.message);
+            // Non-fatal: continue creating the order without the files
+        }
+
         const now = new Date();
         const order = await prisma.orders.create({
             data: {
@@ -107,7 +149,10 @@ export const store = async (req, res) => {
                 deadline: new Date(deadline),
                 notes: notes || null,
                 external_link: external_link || null,
-                payment_method: payment_method,
+                reference_file: referenceFileUrl || null,
+                previous_project_file: previousProjectFileUrl || null,
+                student_card: studentCardUrl || null,
+                payment_method: payment_method || 'qris',
                 status,
                 is_negotiation,
                 proposed_price: is_negotiation ? parseFloat(proposed_price) : null,
@@ -125,8 +170,9 @@ export const store = async (req, res) => {
         res.redirect(`/orders/${order.order_number}?message=${encodeURIComponent(message)}`);
 
     } catch (error) {
-        console.error('Order Store Error', error);
-        res.status(500).send('Failed to create order');
+        console.error('Order Store Error', error.message, error.code);
+        res.cookie('flash_error', 'Gagal membuat order: ' + error.message);
+        return res.redirect('/orders/create' + (package_id ? `?package_id=${package_id}` : ''));
     }
 };
 

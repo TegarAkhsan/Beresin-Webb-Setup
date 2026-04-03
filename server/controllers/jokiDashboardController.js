@@ -59,8 +59,12 @@ export const index = async (req, res) => {
             orderBy: { created_at: 'desc' }
         });
 
+        // Available tasks = orders assigned to this joki but not yet started
         const upcomingTasks = allJobs.filter(o => !o.started_at && ['in_progress', 'pending_assignment'].includes(o.status));
-        const activeTasks = allJobs.filter(o => o.started_at && ['in_progress', 'review', 'revision', 'finalization'].includes(o.status));
+        // Active tasks = orders that have been started
+        const activeTasks = allJobs.filter(o => o.started_at && ['in_progress', 'revision', 'finalization'].includes(o.status));
+        // Review tasks = submitted, waiting for customer/admin approval
+        const reviewTasks = allJobs.filter(o => o.status === 'review');
         const completedTasks = allJobs.filter(o => o.status === 'completed');
 
         const totalEarnings = completedTasks.reduce((sum, o) => sum + calculateJokiCommission(o), 0);
@@ -79,6 +83,7 @@ export const index = async (req, res) => {
         res.inertia('Dashboards/JokiDashboard', {
             upcomingTasks: upcomingTasks.map(mapOrder),
             activeTasks: activeTasks.map(mapOrder),
+            reviewTasks: reviewTasks.map(mapOrder),
             completedTasks: completedTasks.map(mapOrder),
             stats: {
                 total_earnings: totalEarnings,

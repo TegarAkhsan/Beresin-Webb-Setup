@@ -11,6 +11,9 @@ router.post('/joki/orders/:id/start', requireAuth, isJoki, startTask);
 router.post('/joki/orders/:id/milestone', requireAuth, isJoki, upload.single('milestone_file'), uploadMilestone);
 router.post('/joki/orders/:id/finalize', requireAuth, isJoki, finalizeOrder);
 router.post('/joki/payout/request', requireAuth, isJoki, requestPayout);
+// Both routes map to the same handler (ziggy.js uses /joki/payout/settings, legacy used /joki/bank-details)
+router.post('/joki/payout/settings', requireAuth, isJoki, updateBankDetails);
 router.post('/joki/bank-details', requireAuth, isJoki, updateBankDetails);
 
 export default router;
+

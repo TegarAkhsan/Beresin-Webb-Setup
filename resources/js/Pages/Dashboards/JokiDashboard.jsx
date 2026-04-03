@@ -12,7 +12,7 @@ import TasksTab from './Joki/TasksTab';
 import EarningsTab from './Joki/EarningsTab';
 import CompletedTab from './Joki/CompletedTab';
 
-export default function JokiDashboard({ auth, upcomingTasks, activeTasks, reviewTasks, completedTasks = [], stats, financials }) {
+export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = [], reviewTasks = [], completedTasks = [], stats, financials }) {
     // Tab state management
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
