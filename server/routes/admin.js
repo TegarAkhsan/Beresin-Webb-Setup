@@ -1,8 +1,12 @@
 import express from 'express';
 import {
-    index, verify, approvePayment, assign, storeAssignment, processPayout,
+    index, verify, approvePayment, approveAdditionalPayment,
+    assign, storeAssignment, batchAutoAssign,
+    processPayout, rejectPayout,
     users, createUser, storeUser, editUser, updateUser, deleteUser, blacklistUser,
     services, storeService, editService, updateService, deleteService,
+    storePackage, updatePackage, deletePackage,
+    storeAddon, updateAddon, deleteAddon,
     settings, updateSettings,
     transactions,
     chat, sendChatMessage, getChatMessages, sendChatReply,
@@ -11,23 +15,25 @@ import {
 import { requireAuth, isAdmin } from '../middleware/inertiaMiddleware.js';
 import { upload } from '../middleware/upload.js';
 
-
-
 const router = express.Router();
 
-// Dashboard
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 router.get('/admin', requireAuth, isAdmin, index);
 
-// Orders
+// ─── Orders ───────────────────────────────────────────────────────────────────
 router.get('/admin/orders/verify', requireAuth, isAdmin, verify);
 router.post('/admin/orders/:id/approve', requireAuth, isAdmin, approvePayment);
+router.post('/admin/orders/:id/approve-additional', requireAuth, isAdmin, approveAdditionalPayment);
+// NOTE: batch must come before :id to avoid route conflict
+router.post('/admin/orders/assign/batch', requireAuth, isAdmin, batchAutoAssign);
 router.get('/admin/orders/assign', requireAuth, isAdmin, assign);
 router.post('/admin/orders/:id/assign', requireAuth, isAdmin, storeAssignment);
 
-// Payouts
+// ─── Payouts ──────────────────────────────────────────────────────────────────
 router.post('/admin/payouts/:id/process', requireAuth, isAdmin, processPayout);
+router.post('/admin/payouts/:id/reject', requireAuth, isAdmin, rejectPayout);
 
-// Users
+// ─── Users ────────────────────────────────────────────────────────────────────
 router.get('/admin/users', requireAuth, isAdmin, users);
 router.get('/admin/users/create', requireAuth, isAdmin, createUser);
 router.post('/admin/users', requireAuth, isAdmin, storeUser);
@@ -36,30 +42,40 @@ router.post('/admin/users/:id', requireAuth, isAdmin, updateUser);
 router.post('/admin/users/:id/delete', requireAuth, isAdmin, deleteUser);
 router.post('/admin/users/:id/blacklist', requireAuth, isAdmin, blacklistUser);
 
-// Services
+// ─── Services ─────────────────────────────────────────────────────────────────
 router.get('/admin/services', requireAuth, isAdmin, services);
 router.post('/admin/services', requireAuth, isAdmin, storeService);
 router.get('/admin/services/:id/edit', requireAuth, isAdmin, editService);
 router.post('/admin/services/:id', requireAuth, isAdmin, updateService);
 router.post('/admin/services/:id/delete', requireAuth, isAdmin, deleteService);
 
-// Settings — multer for file uploads (logo, qris)
+// ─── Packages (admin.services.packages.store / admin.packages.update / admin.packages.destroy) ──
+router.post('/admin/services/:serviceId/packages', requireAuth, isAdmin, storePackage);
+router.put('/admin/packages/:id', requireAuth, isAdmin, updatePackage);
+router.delete('/admin/packages/:id', requireAuth, isAdmin, deletePackage);
+
+// ─── Addons (admin.packages.addons.store / admin.addons.update / admin.addons.destroy) ──────────
+router.post('/admin/packages/:packageId/addons', requireAuth, isAdmin, storeAddon);
+router.put('/admin/addons/:id', requireAuth, isAdmin, updateAddon);
+router.delete('/admin/addons/:id', requireAuth, isAdmin, deleteAddon);
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
 router.get('/admin/settings', requireAuth, isAdmin, settings);
 router.post('/admin/settings', requireAuth, isAdmin,
     upload.fields([{ name: 'invoice_logo', maxCount: 1 }, { name: 'qris_image', maxCount: 1 }]),
     updateSettings
 );
 
-// Transactions
+// ─── Transactions ─────────────────────────────────────────────────────────────
 router.get('/admin/transactions', requireAuth, isAdmin, transactions);
 
-// Chat
+// ─── Chat ─────────────────────────────────────────────────────────────────────
 router.get('/admin/chat', requireAuth, isAdmin, chat);
 router.get('/admin/chat/:userId', requireAuth, isAdmin, getChatMessages);
 router.post('/admin/chat/:userId/reply', requireAuth, isAdmin, sendChatReply);
 router.post('/admin/chat/send', requireAuth, isAdmin, sendChatMessage);
 
-// Earnings
+// ─── Earnings ─────────────────────────────────────────────────────────────────
 router.get('/admin/earnings', requireAuth, isAdmin, earnings);
 
 export default router;

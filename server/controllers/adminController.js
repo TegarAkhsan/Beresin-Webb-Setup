@@ -242,6 +242,94 @@ export const processPayout = async (req, res) => {
     }
 };
 
+export const rejectPayout = async (req, res) => {
+    const { id } = req.params;
+    const { admin_note } = req.body;
+    try {
+        await prisma.payout_requests.update({
+            where: { id: parseInt(id) },
+            data: { status: 'rejected', admin_note: admin_note || 'Rejected by admin', updated_at: new Date() }
+        });
+        return flashRedirect(res, '/admin', 'Payout berhasil ditolak');
+    } catch (error) {
+        console.error('[REJECT PAYOUT ERROR]', error.message);
+        return flashRedirect(res, '/admin', 'Gagal menolak payout', true);
+    }
+};
+
+export const approveAdditionalPayment = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const order = await prisma.orders.findUnique({ where: { id: parseInt(id) } });
+        if (!order) return flashRedirect(res, '/admin/orders/verify', 'Order tidak ditemukan', true);
+
+        await prisma.orders.update({
+            where: { id: parseInt(id) },
+            data: {
+                additional_payment_status: 'paid',
+                amount: { increment: Number(order.additional_fee || 0) },
+                updated_at: new Date()
+            }
+        });
+        return flashRedirect(res, '/admin/orders/verify', 'Pembayaran tambahan berhasil disetujui');
+    } catch (error) {
+        console.error('[APPROVE ADDITIONAL PAYMENT ERROR]', error.message);
+        return flashRedirect(res, '/admin/orders/verify', 'Gagal menyetujui pembayaran tambahan', true);
+    }
+};
+
+export const batchAutoAssign = async (req, res) => {
+    try {
+        const pendingOrders = await prisma.orders.findMany({
+            where: { status: 'pending_assignment' },
+            include: { packages: true }
+        });
+
+        let assigned = 0;
+        for (const order of pendingOrders) {
+            const leastBusyJoki = await prisma.users.findFirst({
+                where: { role: 'joki' },
+                include: { _count: { select: { orders_orders_joki_idTousers: { where: { status: { in: ['in_progress', 'review'] } } } } } },
+                orderBy: { orders_orders_joki_idTousers: { _count: 'asc' } }
+            });
+
+            if (!leastBusyJoki) break;
+
+            const jokiFee = (Number(order.base_price) * 0.65) + (Number(order.rush_fee) * 0.80);
+            await prisma.orders.update({
+                where: { id: order.id },
+                data: { joki_id: leastBusyJoki.id, joki_fee: jokiFee, status: 'in_progress', started_at: new Date(), updated_at: new Date() }
+            });
+
+            const templates = await prisma.milestone_templates.findMany({
+                where: { service_id: order.packages?.service_id },
+                orderBy: { sort_order: 'asc' }
+            });
+
+            if (templates.length > 0) {
+                await prisma.order_milestones.createMany({
+                    data: templates.map(t => ({
+                        order_id: order.id, name: t.name,
+                        description: t.description || t.requirements,
+                        weight: t.weight, sort_order: t.sort_order,
+                        status: t.sort_order === 1 ? 'in_progress' : 'pending',
+                        created_at: new Date(), updated_at: new Date()
+                    }))
+                });
+            }
+
+            assigned++;
+        }
+
+        return flashRedirect(res, '/admin/orders/assign', `${assigned} order berhasil di-assign otomatis`);
+    } catch (error) {
+        console.error('[BATCH AUTO-ASSIGN ERROR]', error.message);
+        return flashRedirect(res, '/admin/orders/assign', 'Gagal batch assign: ' + error.message, true);
+    }
+};
+
+
+
 // ─── Users ────────────────────────────────────────────────────────────────────
 export const users = async (req, res) => {
     const search = req.query.search || '';
@@ -418,6 +506,108 @@ export const deleteService = async (req, res) => {
         return flashRedirect(res, '/admin/services', 'Gagal menghapus service', true);
     }
 };
+
+// ─── Packages ─────────────────────────────────────────────────────────────────
+
+export const storePackage = async (req, res) => {
+    const { serviceId } = req.params;
+    const { name, description, price, revision_limit, duration_days } = req.body;
+    try {
+        await prisma.packages.create({
+            data: {
+                service_id: parseInt(serviceId),
+                name, description,
+                price: parseFloat(price || 0),
+                revision_limit: parseInt(revision_limit || 0),
+                duration_days: parseInt(duration_days || 0),
+                created_at: new Date(), updated_at: new Date()
+            }
+        });
+        return flashRedirect(res, `/admin/services/${serviceId}/edit`, 'Package berhasil dibuat');
+    } catch (error) {
+        console.error('[STORE PACKAGE ERROR]', error.message);
+        return flashRedirect(res, `/admin/services/${serviceId}/edit`, 'Gagal membuat package', true);
+    }
+};
+
+export const updatePackage = async (req, res) => {
+    const { id } = req.params;
+    const { name, description, price, revision_limit, duration_days } = req.body;
+    try {
+        const pkg = await prisma.packages.findUnique({ where: { id: parseInt(id) } });
+        await prisma.packages.update({
+            where: { id: parseInt(id) },
+            data: { name, description, price: parseFloat(price || 0), revision_limit: parseInt(revision_limit || 0), duration_days: parseInt(duration_days || 0), updated_at: new Date() }
+        });
+        return flashRedirect(res, `/admin/services/${pkg.service_id}/edit`, 'Package berhasil diupdate');
+    } catch (error) {
+        return flashRedirect(res, '/admin/services', 'Gagal update package', true);
+    }
+};
+
+export const deletePackage = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const pkg = await prisma.packages.findUnique({ where: { id: parseInt(id) } });
+        await prisma.packages.delete({ where: { id: parseInt(id) } });
+        return flashRedirect(res, `/admin/services/${pkg.service_id}/edit`, 'Package berhasil dihapus');
+    } catch (error) {
+        return flashRedirect(res, '/admin/services', 'Gagal menghapus package', true);
+    }
+};
+
+// ─── Addons ───────────────────────────────────────────────────────────────────
+
+export const storeAddon = async (req, res) => {
+    const { packageId } = req.params;
+    const { name, description, price, is_active } = req.body;
+    try {
+        await prisma.package_addons.create({
+            data: {
+                package_id: parseInt(packageId),
+                name, description,
+                price: parseFloat(price || 0),
+                is_active: is_active === 'true' || is_active === true || is_active === '1',
+                created_at: new Date(), updated_at: new Date()
+            }
+        });
+        const pkg = await prisma.packages.findUnique({ where: { id: parseInt(packageId) } });
+        return flashRedirect(res, `/admin/services/${pkg?.service_id}/edit`, 'Addon berhasil dibuat');
+    } catch (error) {
+        console.error('[STORE ADDON ERROR]', error.message);
+        return flashRedirect(res, '/admin/services', 'Gagal membuat addon', true);
+    }
+};
+
+export const updateAddon = async (req, res) => {
+    const { id } = req.params;
+    const { name, description, price, is_active } = req.body;
+    try {
+        const addon = await prisma.package_addons.findUnique({ where: { id: parseInt(id) } });
+        const pkg = await prisma.packages.findUnique({ where: { id: addon.package_id } });
+        await prisma.package_addons.update({
+            where: { id: parseInt(id) },
+            data: { name, description, price: parseFloat(price || 0), is_active: is_active === 'true' || is_active === true || is_active === '1', updated_at: new Date() }
+        });
+        return flashRedirect(res, `/admin/services/${pkg?.service_id}/edit`, 'Addon berhasil diupdate');
+    } catch (error) {
+        return flashRedirect(res, '/admin/services', 'Gagal update addon', true);
+    }
+};
+
+export const deleteAddon = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const addon = await prisma.package_addons.findUnique({ where: { id: parseInt(id) } });
+        const pkg = await prisma.packages.findUnique({ where: { id: addon.package_id } });
+        await prisma.package_addons.delete({ where: { id: parseInt(id) } });
+        return flashRedirect(res, `/admin/services/${pkg?.service_id}/edit`, 'Addon berhasil dihapus');
+    } catch (error) {
+        return flashRedirect(res, '/admin/services', 'Gagal menghapus addon', true);
+    }
+};
+
+
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 export const settings = async (req, res) => {

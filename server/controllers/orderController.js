@@ -320,3 +320,244 @@ export const cancel = async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 };
+
+// ─── Review Page (orders.review) ─────────────────────────────────────────────
+
+export const review = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const order = await prisma.orders.findFirst({
+            where: {
+                OR: [{ order_number: id }, { id: isNaN(parseInt(id)) ? -1 : parseInt(id) }]
+            },
+            include: {
+                packages: { include: { services: true } },
+                users_orders_joki_idTousers: true,
+                users_orders_user_idTousers: true,
+                order_milestones: { orderBy: { sort_order: 'asc' } },
+            }
+        });
+
+        if (!order) return res.status(404).send('Order not found');
+        if (order.user_id !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).send('Forbidden');
+        }
+
+        const settingsRaw = await prisma.settings.findMany({
+            where: { key: { in: ['whatsapp_number', 'qris_image'] } }
+        });
+        const settings = settingsRaw.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
+        const serialized = serializeOrder(order);
+
+        res.inertia('Orders/Review', {
+            order: {
+                ...serialized,
+                package: {
+                    ...order.packages,
+                    price: Number(order.packages?.price || 0),
+                    service: order.packages?.services,
+                },
+                joki: order.users_orders_joki_idTousers,
+                user: order.users_orders_user_idTousers,
+                milestones: (order.order_milestones || []).map(m => ({
+                    ...m,
+                    created_at: m.created_at instanceof Date ? m.created_at.toISOString() : m.created_at,
+                    updated_at: m.updated_at instanceof Date ? m.updated_at.toISOString() : m.updated_at,
+                    completed_at: m.completed_at instanceof Date ? m.completed_at.toISOString() : null,
+                })),
+            },
+            whatsapp_number: settings.whatsapp_number || null,
+            qris_image: settings.qris_image || null,
+        });
+    } catch (error) {
+        console.error('Order Review Error', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+// ─── Invoice Download (orders.invoice) ───────────────────────────────────────
+
+export const downloadInvoice = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const order = await prisma.orders.findFirst({
+            where: {
+                OR: [{ order_number: id }, { id: isNaN(parseInt(id)) ? -1 : parseInt(id) }]
+            },
+            include: {
+                packages: { include: { services: true } },
+                users_orders_user_idTousers: true,
+            }
+        });
+
+        if (!order) return res.status(404).send('Order not found');
+        if (order.user_id !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).send('Forbidden');
+        }
+
+        // Simple HTML invoice response (no PDF library needed)
+        const user = order.users_orders_user_idTousers;
+        const pkg = order.packages;
+        const html = `
+<!DOCTYPE html>
+<html>
+<head><title>Invoice ${order.order_number}</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+  h1 { color: #1e293b; } table { width: 100%; border-collapse: collapse; }
+  td, th { padding: 10px; border: 1px solid #e2e8f0; text-align: left; }
+  th { background: #f8fafc; } .total { font-weight: bold; font-size: 1.2em; }
+</style></head>
+<body>
+<h1>INVOICE</h1>
+<p><strong>Order Number:</strong> ${order.order_number}</p>
+<p><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString('id-ID')}</p>
+<p><strong>Customer:</strong> ${user?.name || '-'} (${user?.email || '-'})</p>
+<hr/>
+<table>
+  <tr><th>Service</th><th>Package</th><th>Amount</th></tr>
+  <tr>
+    <td>${pkg?.services?.name || '-'}</td>
+    <td>${pkg?.name || '-'}</td>
+    <td>Rp ${Number(order.amount).toLocaleString('id-ID')}</td>
+  </tr>
+  <tr class="total"><td colspan="2">Total</td><td>Rp ${Number(order.amount).toLocaleString('id-ID')}</td></tr>
+</table>
+<p>Status: <strong>${order.status.replace(/_/g, ' ').toUpperCase()}</strong></p>
+</body>
+</html>`;
+
+        res.setHeader('Content-Type', 'text/html');
+        res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.order_number}.html"`);
+        return res.send(html);
+    } catch (error) {
+        console.error('Invoice Error', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+
+// ─── Accept Result (orders.accept) ───────────────────────────────────────────
+
+export const acceptResult = async (req, res) => {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+    try {
+        const order = await prisma.orders.findFirst({
+            where: { OR: [{ order_number: id }, { id: isNaN(parseInt(id)) ? -1 : parseInt(id) }] }
+        });
+        if (!order) return res.status(404).send('Order not found');
+
+        await prisma.orders.update({
+            where: { id: order.id },
+            data: { status: 'completed', completed_at: new Date(), updated_at: new Date() }
+        });
+
+        // Save review if rating provided
+        if (rating) {
+            await prisma.reviews.create({
+                data: {
+                    order_id: order.id,
+                    user_id: req.user.id,
+                    rating: parseInt(rating),
+                    comment: comment || null,
+                    created_at: new Date(),
+                    updated_at: new Date()
+                }
+            });
+        }
+
+        return flashRedirect(res, `/orders/${order.order_number}`, 'Order selesai! Terima kasih.');
+    } catch (error) {
+        console.error('Accept Result Error', error);
+        return flashRedirect(res, `/orders/${id}`, 'Gagal menerima hasil', true);
+    }
+};
+
+// ─── Request Revision (orders.revision) ──────────────────────────────────────
+
+export const requestRevision = async (req, res) => {
+    const { id } = req.params;
+    const { revision_reason } = req.body;
+    try {
+        const order = await prisma.orders.findFirst({
+            where: { OR: [{ order_number: id }, { id: isNaN(parseInt(id)) ? -1 : parseInt(id) }] }
+        });
+        if (!order) return res.status(404).send('Order not found');
+
+        await prisma.orders.update({
+            where: { id: order.id },
+            data: {
+                status: 'revision',
+                revision_reason: revision_reason || null,
+                revision_count: (order.revision_count || 0) + 1,
+                updated_at: new Date()
+            }
+        });
+
+        return flashRedirect(res, `/orders/${order.order_number}`, 'Permintaan revisi berhasil dikirim.');
+    } catch (error) {
+        console.error('Request Revision Error', error);
+        return flashRedirect(res, `/orders/${id}`, 'Gagal mengirim permintaan revisi', true);
+    }
+};
+
+// ─── Request Refund (orders.refund) ──────────────────────────────────────────
+
+export const requestRefund = async (req, res) => {
+    const { id } = req.params;
+    const { refund_reason } = req.body;
+    try {
+        const order = await prisma.orders.findFirst({
+            where: { OR: [{ order_number: id }, { id: isNaN(parseInt(id)) ? -1 : parseInt(id) }] }
+        });
+        if (!order) return res.status(404).send('Order not found');
+
+        await prisma.orders.update({
+            where: { id: order.id },
+            data: {
+                refund_status: 'requested',
+                refund_reason: refund_reason || null,
+                updated_at: new Date()
+            }
+        });
+
+        return flashRedirect(res, `/orders/${order.order_number}`, 'Permintaan refund berhasil dikirim. Admin akan menghubungi Anda.');
+    } catch (error) {
+        console.error('Request Refund Error', error);
+        return flashRedirect(res, `/orders/${id}`, 'Gagal mengirim permintaan refund', true);
+    }
+};
+
+// ─── Upload Additional Payment (orders.additional-payment) ───────────────────
+
+export const uploadAdditionalPayment = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const order = await prisma.orders.findFirst({
+            where: { OR: [{ order_number: id }, { id: isNaN(parseInt(id)) ? -1 : parseInt(id) }] }
+        });
+        if (!order) return res.status(404).send('Order not found');
+
+        let proofUrl = null;
+        if (req.file) {
+            const ext = req.file.originalname.split('.').pop();
+            const fileName = `additional-payments/${order.order_number}-${Date.now()}.${ext}`;
+            proofUrl = await uploadToStorage(req.file.buffer, 'beresin-uploads', fileName, req.file.mimetype);
+        }
+
+        await prisma.orders.update({
+            where: { id: order.id },
+            data: {
+                additional_payment_proof: proofUrl,
+                additional_payment_status: 'pending_verification',
+                updated_at: new Date()
+            }
+        });
+
+        return flashRedirect(res, `/orders/${order.order_number}`, 'Bukti pembayaran tambahan berhasil dikirim.');
+    } catch (error) {
+        console.error('Additional Payment Error', error);
+        return flashRedirect(res, `/orders/${id}`, 'Gagal mengupload bukti pembayaran', true);
+    }
+};
+

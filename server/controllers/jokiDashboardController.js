@@ -241,3 +241,60 @@ export const updateBankDetails = async (req, res) => {
         return flashRedirect(res, '/joki/dashboard', 'Gagal update informasi bank', true);
     }
 };
+
+// ─── Upload Result File (joki.orders.upload) ──────────────────────────────────
+
+export const uploadResult = async (req, res) => {
+    const { id } = req.params;
+    const { external_link, note } = req.body;
+
+    try {
+        const order = await prisma.orders.findFirst({
+            where: { id: parseInt(id) }
+        });
+        if (!order) return flashRedirect(res, '/joki/dashboard', 'Order tidak ditemukan', true);
+
+        let resultFileUrl = null;
+        if (req.file) {
+            const ext = req.file.originalname.split('.').pop();
+            const fileName = `results/order-${id}-${Date.now()}.${ext}`;
+            resultFileUrl = await uploadToStorage(req.file.buffer, 'beresin-uploads', fileName, req.file.mimetype);
+        }
+
+        await prisma.orders.update({
+            where: { id: parseInt(id) },
+            data: {
+                result_file: resultFileUrl || order.result_file,
+                result_link: external_link || order.result_link,
+                joki_notes: note || order.joki_notes,
+                status: 'review',
+                updated_at: new Date()
+            }
+        });
+
+        return flashRedirect(res, '/joki/dashboard', 'Hasil pekerjaan berhasil dikirim');
+    } catch (error) {
+        console.error('[UPLOAD RESULT ERROR]', error.message);
+        return flashRedirect(res, '/joki/dashboard', 'Gagal mengirim hasil pekerjaan', true);
+    }
+};
+
+// ─── Update External Link (joki.orders.link) ─────────────────────────────────
+
+export const updateLink = async (req, res) => {
+    const { id } = req.params;
+    const { link } = req.body;
+
+    try {
+        await prisma.orders.update({
+            where: { id: parseInt(id) },
+            data: { result_link: link, updated_at: new Date() }
+        });
+
+        return flashRedirect(res, '/joki/dashboard', 'Link berhasil diupdate');
+    } catch (error) {
+        console.error('[UPDATE LINK ERROR]', error.message);
+        return flashRedirect(res, '/joki/dashboard', 'Gagal update link', true);
+    }
+};
+
