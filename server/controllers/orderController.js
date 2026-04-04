@@ -17,12 +17,16 @@ const serializeOrder = (order) => ({
     platform_fee: Number(order.platform_fee || 0),
     joki_fee: Number(order.joki_fee || 0),
     additional_revision_fee: Number(order.additional_revision_fee || 0),
+    proposed_price: order.proposed_price != null ? Number(order.proposed_price) : null,
+    refund_amount: order.refund_amount != null ? Number(order.refund_amount) : null,
     created_at: order.created_at instanceof Date ? order.created_at.toISOString() : (order.created_at ? new Date(order.created_at).toISOString() : new Date().toISOString()),
     updated_at: order.updated_at instanceof Date ? order.updated_at.toISOString() : null,
     deadline: order.deadline instanceof Date ? order.deadline.toISOString() : order.deadline,
     completed_at: order.completed_at instanceof Date ? order.completed_at.toISOString() : null,
     started_at: order.started_at instanceof Date ? order.started_at.toISOString() : null,
+    negotiation_deadline: order.negotiation_deadline instanceof Date ? order.negotiation_deadline.toISOString() : order.negotiation_deadline,
 });
+
 
 export const create = async (req, res) => {
     try {
@@ -36,10 +40,34 @@ export const create = async (req, res) => {
         });
 
         const formattedPackages = packages.map(pkg => ({
-            ...pkg,
-            price: Number(pkg.price),
-            service: pkg.services,
-            addons: pkg.package_addons
+            id: pkg.id,
+            name: pkg.name,
+            description: pkg.description,
+            price: Number(pkg.price || 0),
+            joki_fee: Number(pkg.joki_fee || 0),
+            duration_days: pkg.duration_days,
+            max_revisions: pkg.max_revisions,
+            is_negotiable: pkg.is_negotiable,
+            features: pkg.features,
+            addon_features: pkg.addon_features,
+            service_id: pkg.service_id,
+            created_at: pkg.created_at instanceof Date ? pkg.created_at.toISOString() : pkg.created_at,
+            updated_at: pkg.updated_at instanceof Date ? pkg.updated_at.toISOString() : pkg.updated_at,
+            // Named relations
+            service: pkg.services ? {
+                id: pkg.services.id,
+                name: pkg.services.name,
+                slug: pkg.services.slug,
+                description: pkg.services.description,
+            } : null,
+            addons: (pkg.package_addons || []).map(addon => ({
+                id: addon.id,
+                name: addon.name,
+                description: addon.description,
+                price: Number(addon.price || 0),
+                estimate_days: addon.estimate_days || 1,
+                is_active: addon.is_active,
+            })),
         }));
 
         res.inertia('Orders/Create', {
@@ -47,10 +75,11 @@ export const create = async (req, res) => {
             selectedPackageId: req.query.package_id || null
         });
     } catch (error) {
-        console.error('Order Create Error', error);
-        res.status(500).send('Internal Server Error');
+        console.error('[Order Create Error]', error.message, error.stack);
+        res.status(500).send('Internal Server Error: ' + error.message);
     }
 };
+
 
 export const store = async (req, res) => {
     const {
@@ -226,9 +255,20 @@ export const show = async (req, res) => {
                 ...serialized,
                 selected_features: selectedFeatures,
                 package: {
-                    ...order.packages,
+                    id: order.packages?.id,
+                    name: order.packages?.name,
+                    description: order.packages?.description,
                     price: Number(order.packages?.price || 0),
-                    service: order.packages?.services,
+                    joki_fee: Number(order.packages?.joki_fee || 0),
+                    duration_days: order.packages?.duration_days,
+                    max_revisions: order.packages?.max_revisions,
+                    is_negotiable: order.packages?.is_negotiable,
+                    features: order.packages?.features,
+                    service: order.packages?.services ? {
+                        id: order.packages.services.id,
+                        name: order.packages.services.name,
+                        slug: order.packages.services.slug,
+                    } : null,
                 },
                 joki: order.users_orders_joki_idTousers,
                 user: order.users_orders_user_idTousers,
@@ -381,9 +421,20 @@ export const review = async (req, res) => {
                 ...serialized,
                 selected_features: selectedFeaturesReview,
                 package: {
-                    ...order.packages,
+                    id: order.packages?.id,
+                    name: order.packages?.name,
+                    description: order.packages?.description,
                     price: Number(order.packages?.price || 0),
-                    service: order.packages?.services,
+                    joki_fee: Number(order.packages?.joki_fee || 0),
+                    duration_days: order.packages?.duration_days,
+                    max_revisions: order.packages?.max_revisions,
+                    is_negotiable: order.packages?.is_negotiable,
+                    features: order.packages?.features,
+                    service: order.packages?.services ? {
+                        id: order.packages.services.id,
+                        name: order.packages.services.name,
+                        slug: order.packages.services.slug,
+                    } : null,
                 },
                 joki: order.users_orders_joki_idTousers,
                 user: order.users_orders_user_idTousers,
