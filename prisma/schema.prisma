@@ -197,7 +197,6 @@ model package_addons {
   name          String
   price         Decimal
   description   String?
-  estimate_days Int      @default(1)
   is_active     Boolean  @default(true)
   created_at    DateTime?
   updated_at    DateTime?

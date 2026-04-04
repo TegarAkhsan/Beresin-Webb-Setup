@@ -65,7 +65,6 @@ export const create = async (req, res) => {
                 name: addon.name,
                 description: addon.description,
                 price: Number(addon.price || 0),
-                estimate_days: addon.estimate_days || 1,
                 is_active: addon.is_active,
             })),
         }));
