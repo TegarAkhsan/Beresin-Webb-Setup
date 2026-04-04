@@ -208,9 +208,23 @@ export const show = async (req, res) => {
 
         const serialized = serializeOrder(order);
 
+        // Parse selected_features from JSON string to array
+        let selectedFeatures = [];
+        if (serialized.selected_features) {
+            try {
+                const parsed = typeof serialized.selected_features === 'string'
+                    ? JSON.parse(serialized.selected_features)
+                    : serialized.selected_features;
+                selectedFeatures = Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                console.error('[PARSE selected_features ERROR]', e.message);
+            }
+        }
+
         res.inertia('Orders/Show', {
             order: {
                 ...serialized,
+                selected_features: selectedFeatures,
                 package: {
                     ...order.packages,
                     price: Number(order.packages?.price || 0),
@@ -349,9 +363,23 @@ export const review = async (req, res) => {
         const settings = settingsRaw.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
         const serialized = serializeOrder(order);
 
+        // Parse selected_features from JSON string to array
+        let selectedFeaturesReview = [];
+        if (serialized.selected_features) {
+            try {
+                const parsed = typeof serialized.selected_features === 'string'
+                    ? JSON.parse(serialized.selected_features)
+                    : serialized.selected_features;
+                selectedFeaturesReview = Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                console.error('[PARSE selected_features ERROR]', e.message);
+            }
+        }
+
         res.inertia('Orders/Review', {
             order: {
                 ...serialized,
+                selected_features: selectedFeaturesReview,
                 package: {
                     ...order.packages,
                     price: Number(order.packages?.price || 0),

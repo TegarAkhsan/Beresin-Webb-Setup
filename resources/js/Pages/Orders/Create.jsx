@@ -47,6 +47,20 @@ export default function Create({ auth, packages, selectedPackageId }) {
     const [rushFee, setRushFee] = useState(0);
     const [totalPrice, setTotalPrice] = useState(0);
 
+    // Helper: get combined, safely-parsed feature list for negotiable packages
+    const getFeatureList = (pkg) => {
+        if (!pkg) return [];
+        if (Array.isArray(pkg.addons) && pkg.addons.length > 0) return pkg.addons;
+        if (pkg.addon_features) {
+            try {
+                const parsed = typeof pkg.addon_features === 'string'
+                    ? JSON.parse(pkg.addon_features) : pkg.addon_features;
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) { return []; }
+        }
+        return [];
+    };
+
     // Initial Defaults
     useEffect(() => {
         const pkg = packages.find(p => p.id == data.package_id);
@@ -76,7 +90,7 @@ export default function Create({ auth, packages, selectedPackageId }) {
         if (!selectedPackage?.is_negotiable) return;
 
         let addonsDays = 1; // Base
-        const features = selectedPackage.addons || selectedPackage.addon_features || [];
+        const features = getFeatureList(selectedPackage);
 
         if (features.length > 0 && data.selected_features.length > 0) {
             const selected = features.filter(f => data.selected_features.includes(f.name));
@@ -104,7 +118,7 @@ export default function Create({ auth, packages, selectedPackageId }) {
             // Calculate base total from add-ons
             let addonsTotal = 0;
             let addonsDays = 1;
-            const features = selectedPackage.addons || selectedPackage.addon_features || [];
+            const features = getFeatureList(selectedPackage);
 
             if (features.length > 0 && data.selected_features.length > 0) {
                 const selected = features.filter(f => data.selected_features.includes(f.name));
@@ -271,34 +285,73 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                     Project Requirements
                                 </h3>
 
-                                {/* Student Pcakage Negotiation Features */}
-                                {selectedPackage?.is_negotiable && (selectedPackage.addons?.length > 0 || selectedPackage.addon_features) && (
-                                    <div className="mb-6 p-4 border border-gray-200 rounded-xl bg-gray-50">
-                                        <label className="block font-medium text-sm text-gray-700 mb-3">Select Features needed:</label>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {(selectedPackage.addons || selectedPackage.addon_features).map((feature, idx) => (
-                                                <div key={idx} className={`flex items-start p-3 rounded-lg border cursor-pointer transition-all ${data.selected_features.includes(feature.name) ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500' : 'border-gray-200 hover:border-gray-300 bg-white'}`} onClick={(e) => {
-                                                    // Only toggle if clicking the container, not the checkbox itself to avoid double toggle
-                                                    if (e.target.type !== 'checkbox') handleFeatureToggle(feature.name);
-                                                }}>
-                                                    <div className="flex items-center h-5">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={data.selected_features.includes(feature.name)}
-                                                            onChange={() => handleFeatureToggle(feature.name)}
-                                                            className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                                                        />
+                                {/* Student Package Negotiation Features */}
+                                {selectedPackage?.is_negotiable && (() => {
+                                    // Safely combine addons (from DB relation) and addon_features (JSON field)
+                                    let featureList = [];
+                                    if (Array.isArray(selectedPackage.addons) && selectedPackage.addons.length > 0) {
+                                        featureList = selectedPackage.addons;
+                                    } else if (selectedPackage.addon_features) {
+                                        try {
+                                            const parsed = typeof selectedPackage.addon_features === 'string'
+                                                ? JSON.parse(selectedPackage.addon_features)
+                                                : selectedPackage.addon_features;
+                                            featureList = Array.isArray(parsed) ? parsed : [];
+                                        } catch (e) {
+                                            featureList = [];
+                                        }
+                                    }
+                                    
+                                    if (featureList.length === 0) {
+                                        return (
+                                            <div className="mb-6 p-4 border border-indigo-100 rounded-xl bg-indigo-50">
+                                                <p className="text-sm text-indigo-600 font-medium">💬 Fitur akan didiskusikan bersama Admin setelah proposal diajukan.</p>
+                                            </div>
+                                        );
+                                    }
+                                    
+                                    return (
+                                        <div className="mb-6 p-4 border-2 border-indigo-100 rounded-xl bg-gray-50">
+                                            <label className="block font-semibold text-sm text-gray-700 mb-3">Pilih Fitur yang Dibutuhkan:</label>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                {featureList.map((feature, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className={`flex items-start p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                                            data.selected_features.includes(feature.name)
+                                                                ? 'border-indigo-500 bg-indigo-50 shadow-[2px_2px_0px_0px_rgba(99,102,241,1)]'
+                                                                : 'border-gray-200 hover:border-indigo-300 bg-white'
+                                                        }`}
+                                                        onClick={(e) => {
+                                                            if (e.target.type !== 'checkbox') handleFeatureToggle(feature.name);
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center h-5">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={data.selected_features.includes(feature.name)}
+                                                                onChange={() => handleFeatureToggle(feature.name)}
+                                                                className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                                                            />
+                                                        </div>
+                                                        <div className="ml-3 text-sm">
+                                                            <label className="font-semibold text-gray-800 cursor-pointer">{feature.name}</label>
+                                                            {feature.price && feature.price > 0 && (
+                                                                <p className="text-indigo-600 text-xs font-medium mt-0.5">
+                                                                    + Rp {new Intl.NumberFormat('id-ID').format(feature.price)}
+                                                                </p>
+                                                            )}
+                                                            {feature.estimate_days && (
+                                                                <p className="text-gray-400 text-xs">⏱ ~{feature.estimate_days} hari</p>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <div className="ml-3 text-sm">
-                                                        <label className="font-medium text-gray-700 cursor-pointer">{feature.name}</label>
-                                                        <p className="text-gray-500 text-xs">+ Rp {new Intl.NumberFormat('id-ID').format(feature.price)}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
+                                            <InputError message={errors.selected_features} className="mt-2" />
                                         </div>
-                                        <InputError message={errors.selected_features} className="mt-2" />
-                                    </div>
-                                )}
+                                    );
+                                })()}
 
                                 <div className="space-y-4">
                                     <div>
@@ -399,7 +452,7 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                             <span className="font-medium">
                                                 {selectedPackage.is_negotiable ? (
                                                     (() => {
-                                                        const features = selectedPackage.addons || selectedPackage.addon_features || [];
+                                                        const features = getFeatureList(selectedPackage);
                                                         const selected = features.filter(f => data.selected_features.includes(f.name));
                                                         const days = 1 + selected.reduce((sum, f) => sum + (parseInt(f.estimate_days) || 1), 0);
                                                         return days + " - " + (days + 2) + " Days";

@@ -42,6 +42,10 @@ export default function Show({ auth, order, whatsapp_number, qris_image }) {
     const [showAcceptModal, setShowAcceptModal] = useState(false);
     const [showRevisionModal, setShowRevisionModal] = useState(false);
 
+    // Flash / query message
+    const pageProps = usePage().props;
+    const flashMessage = pageProps?.flash?.message || null;
+
     useEffect(() => {
         const interval = setInterval(() => {
             setTimeLeft(calculateTimeLeft());
@@ -119,6 +123,14 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
 
             <div className="py-12 bg-gray-50 min-h-screen">
                 <div className="max-w-5xl mx-auto sm:px-6 lg:px-8">
+
+                    {/* Flash Message Banner */}
+                    {flashMessage && (
+                        <div className="mb-6 bg-green-50 border-2 border-green-500 rounded-2xl p-4 flex items-center gap-3">
+                            <svg className="w-6 h-6 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                            <p className="text-green-800 font-semibold">{flashMessage}</p>
+                        </div>
+                    )}
 
                     {/* TOP STATUS BAR */}
                     <div className="bg-white rounded-2xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] p-6 mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -297,16 +309,31 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                         </div>
                                     )}
 
-                                    {/* WAITING APPROVAL VIEW (Use existing logic or ensure it's distinct) */}
+                                    {/* WAITING APPROVAL VIEW - distinguish negotiation vs payment */}
                                     {order.status === 'waiting_approval' && (
                                         <div className="text-center py-6">
-                                            <div className="bg-yellow-50 border-2 border-yellow-400 p-6 rounded-2xl mb-6">
-                                                <div className="text-4xl mb-4">⏳</div>
-                                                <h3 className="font-bold text-lg text-yellow-800 mb-2">Payment Under Verification</h3>
-                                                <p className="text-yellow-700">Thank you! Your payment is being reviewed.</p>
-                                            </div>
+                                            {order.is_negotiation ? (
+                                                // Negotiation (paket pelajar) - Proposal awaiting admin review
+                                                <div className="bg-indigo-50 border-2 border-indigo-400 p-6 rounded-2xl mb-6">
+                                                    <div className="text-4xl mb-4">🤝</div>
+                                                    <h3 className="font-bold text-lg text-indigo-800 mb-2">Proposal Sedang Ditinjau Admin</h3>
+                                                    <p className="text-indigo-700">Proposal Anda telah diterima! Admin akan menghubungi Anda untuk negosiasi harga dan detail proyek.</p>
+                                                    {order.proposed_price > 0 && (
+                                                        <div className="mt-4 bg-white p-3 rounded-xl border border-indigo-200 text-sm">
+                                                            <p className="text-indigo-600 font-semibold">Penawaran Anda: <span className="text-indigo-800 font-black">Rp {new Intl.NumberFormat('id-ID').format(order.proposed_price)}</span></p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                // Regular payment - payment under verification
+                                                <div className="bg-yellow-50 border-2 border-yellow-400 p-6 rounded-2xl mb-6">
+                                                    <div className="text-4xl mb-4">⏳</div>
+                                                    <h3 className="font-bold text-lg text-yellow-800 mb-2">Payment Under Verification</h3>
+                                                    <p className="text-yellow-700">Thank you! Your payment is being reviewed.</p>
+                                                </div>
+                                            )}
                                             <div className="bg-gray-50 p-4 rounded-xl text-sm text-gray-500">
-                                                <p>Admin has been notified via WhatsApp.</p>
+                                                <p>{order.is_negotiation ? 'Admin akan menghubungi Anda via WhatsApp segera.' : 'Admin has been notified via WhatsApp.'}</p>
                                             </div>
 
                                             <Link
