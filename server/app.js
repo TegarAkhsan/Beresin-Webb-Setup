@@ -138,6 +138,17 @@ app.use('/', orderRouter);
 app.use('/', adminRouter);
 app.use('/', jokiRouter);
 
+// TEMP DEBUG: Check packages is_negotiable field
+app.get('/debug/packages', async (req, res) => {
+    const pkgs = await prisma.packages.findMany({ include: { package_addons: true } });
+    res.json(pkgs.map(p => ({
+        id: p.id, name: p.name,
+        is_negotiable: p.is_negotiable,
+        is_neg_type: typeof p.is_negotiable,
+        addons: p.package_addons?.length || 0
+    })));
+});
+
 // Notification check endpoint (polled every 5s by AdminLayout & AuthenticatedLayout)
 app.get('/notifications/check', async (req, res) => {
     try {

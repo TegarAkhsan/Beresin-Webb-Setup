@@ -1,0 +1,20 @@
+{
+    "id": 4,
+    "service_id": 1,
+    "name": "Paket Pelajar",
+    "price": "0.00",
+    "description": "Solusi hemat untuk pelajar\/mahasiswa",
+    "features": [
+        "Harga Negotiable",
+        "Fitur Negotiable",
+        "Konsultasi Gratis",
+        "Waktu Pengerjaan Fleksibel"
+    ],
+    "created_at": "2026-03-17T05:12:31.000000Z",
+    "updated_at": "2026-03-17T05:12:31.000000Z",
+    "duration_days": 3,
+    "joki_fee": "0.00",
+    "max_revisions": 3,
+    "is_negotiable": false,
+    "addon_features": null
+}

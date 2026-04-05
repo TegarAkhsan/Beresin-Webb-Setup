@@ -47,16 +47,56 @@ export default function Create({ auth, packages, selectedPackageId }) {
     const [rushFee, setRushFee] = useState(0);
     const [totalPrice, setTotalPrice] = useState(0);
 
+    // Helper: robust check for is_negotiable (handles boolean, int 1/0, string 'true'/'t')
+    const isNegotiable = (pkg) => {
+        if (!pkg) return false;
+        const v = pkg.is_negotiable;
+        console.log("DEBUG isNegotiable => pkg id:", pkg.id, "name:", pkg.name, "val:", v, "type:", typeof v);
+        return v === true || v === 1 || v === '1' || v === 't' || v === 'true' || v === '1.0';
+    };
+
     // Helper: get combined, safely-parsed feature list for negotiable packages
+    // Priority: addons (DB relation) > addon_features (JSON) > features (base JSON)
     const getFeatureList = (pkg) => {
         if (!pkg) return [];
-        if (Array.isArray(pkg.addons) && pkg.addons.length > 0) return pkg.addons;
+        // 1. Use relational addons (most complete - has price + estimate_days)
+        if (Array.isArray(pkg.addons) && pkg.addons.length > 0) {
+            return pkg.addons.map(a => ({
+                name: typeof a === 'string' ? a : (a.name || ''),
+                price: typeof a === 'object' ? Number(a.price || 0) : 0,
+                estimate_days: typeof a === 'object' ? (a.estimate_days || 1) : 1,
+                description: typeof a === 'object' ? (a.description || '') : '',
+            }));
+        }
+        // 2. Try addon_features JSON field
         if (pkg.addon_features) {
             try {
                 const parsed = typeof pkg.addon_features === 'string'
                     ? JSON.parse(pkg.addon_features) : pkg.addon_features;
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (e) { return []; }
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed.map(a => ({
+                        name: typeof a === 'string' ? a : (a.name || ''),
+                        price: typeof a === 'object' ? Number(a.price || 0) : 0,
+                        estimate_days: typeof a === 'object' ? (a.estimate_days || 1) : 1,
+                        description: typeof a === 'object' ? (a.description || '') : '',
+                    }));
+                }
+            } catch (e) {}
+        }
+        // 3. Try base features JSON field
+        if (pkg.features) {
+            try {
+                const parsed = typeof pkg.features === 'string'
+                    ? JSON.parse(pkg.features) : pkg.features;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed.map(a => ({
+                        name: typeof a === 'string' ? a : (a.name || ''),
+                        price: typeof a === 'object' ? Number(a.price || 0) : 0,
+                        estimate_days: typeof a === 'object' ? (a.estimate_days || 1) : 1,
+                        description: typeof a === 'object' ? (a.description || '') : '',
+                    }));
+                }
+            } catch (e) {}
         }
         return [];
     };
@@ -74,7 +114,7 @@ export default function Create({ auth, packages, selectedPackageId }) {
         }
 
         // Reset negotiation data when package changes
-        if (pkg?.is_negotiable) {
+        if (isNegotiable(pkg)) {
             setData(d => ({
                 ...d,
                 student_card: null,
@@ -85,9 +125,9 @@ export default function Create({ auth, packages, selectedPackageId }) {
 
     }, [data.package_id]);
 
-    // Effect 1: Auto-update deadline when features change (to start with 0 Fee)
+    // Effect 1: Auto-update deadline when features change
     useEffect(() => {
-        if (!selectedPackage?.is_negotiable) return;
+        if (!isNegotiable(selectedPackage)) return;
 
         let addonsDays = 1; // Base
         const features = getFeatureList(selectedPackage);
@@ -104,6 +144,15 @@ export default function Create({ auth, packages, selectedPackageId }) {
 
     }, [data.selected_features, selectedPackage]);
 
+    // Helper: compute reference price from selected features
+    const computeReferencePrice = () => {
+        if (!isNegotiable(selectedPackage)) return 0;
+        const features = getFeatureList(selectedPackage);
+        if (features.length === 0 || data.selected_features.length === 0) return 0;
+        const selected = features.filter(f => data.selected_features.includes(f.name));
+        return selected.reduce((sum, f) => sum + Number(f.price || 0), 0);
+    };
+
 
     // Effect 2: Calculate Fee and Total when Deadline or Features change
     useEffect(() => {
@@ -114,7 +163,7 @@ export default function Create({ auth, packages, selectedPackageId }) {
 
         }
 
-        if (selectedPackage.is_negotiable) {
+        if (isNegotiable(selectedPackage)) {
             // Calculate base total from add-ons
             let addonsTotal = 0;
             let addonsDays = 1;
@@ -209,7 +258,7 @@ export default function Create({ auth, packages, selectedPackageId }) {
                             <div className="bg-white p-6 rounded-2xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)]">
                                 <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
                                     <span className="bg-yellow-400 text-slate-900 border-2 border-slate-900 w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">1</span>
-                                    Personal Details {selectedPackage?.is_negotiable && <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full border border-indigo-200">Student Verif Req.</span>}
+                                    Personal Details {isNegotiable(selectedPackage) && <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full border border-indigo-200">Student Verif Req.</span>}
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -259,7 +308,7 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                     </div>
 
                                     {/* Student Card Upload for Negotiation Packages */}
-                                    {selectedPackage?.is_negotiable && (
+                                    {isNegotiable(selectedPackage) && (
                                         <div className="md:col-span-2 mt-4 p-4 border-2 border-indigo-100 bg-indigo-50 rounded-xl">
                                             <InputLabel htmlFor="student_card" value="Student ID Card (Kartu Tanda Mahasiswa)" />
                                             <p className="text-xs text-indigo-600 mb-2">Required for Student Package verification.</p>
@@ -283,75 +332,8 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                 <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
                                     <span className="bg-yellow-400 text-slate-900 border-2 border-slate-900 w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">2</span>
                                     Project Requirements
+                                    {isNegotiable(selectedPackage) && <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full border border-indigo-200">Paket Pelajar</span>}
                                 </h3>
-
-                                {/* Student Package Negotiation Features */}
-                                {selectedPackage?.is_negotiable && (() => {
-                                    // Safely combine addons (from DB relation) and addon_features (JSON field)
-                                    let featureList = [];
-                                    if (Array.isArray(selectedPackage.addons) && selectedPackage.addons.length > 0) {
-                                        featureList = selectedPackage.addons;
-                                    } else if (selectedPackage.addon_features) {
-                                        try {
-                                            const parsed = typeof selectedPackage.addon_features === 'string'
-                                                ? JSON.parse(selectedPackage.addon_features)
-                                                : selectedPackage.addon_features;
-                                            featureList = Array.isArray(parsed) ? parsed : [];
-                                        } catch (e) {
-                                            featureList = [];
-                                        }
-                                    }
-                                    
-                                    if (featureList.length === 0) {
-                                        return (
-                                            <div className="mb-6 p-4 border border-indigo-100 rounded-xl bg-indigo-50">
-                                                <p className="text-sm text-indigo-600 font-medium">💬 Fitur akan didiskusikan bersama Admin setelah proposal diajukan.</p>
-                                            </div>
-                                        );
-                                    }
-                                    
-                                    return (
-                                        <div className="mb-6 p-4 border-2 border-indigo-100 rounded-xl bg-gray-50">
-                                            <label className="block font-semibold text-sm text-gray-700 mb-3">Pilih Fitur yang Dibutuhkan:</label>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                {featureList.map((feature, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        className={`flex items-start p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                                                            data.selected_features.includes(feature.name)
-                                                                ? 'border-indigo-500 bg-indigo-50 shadow-[2px_2px_0px_0px_rgba(99,102,241,1)]'
-                                                                : 'border-gray-200 hover:border-indigo-300 bg-white'
-                                                        }`}
-                                                        onClick={(e) => {
-                                                            if (e.target.type !== 'checkbox') handleFeatureToggle(feature.name);
-                                                        }}
-                                                    >
-                                                        <div className="flex items-center h-5">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={data.selected_features.includes(feature.name)}
-                                                                onChange={() => handleFeatureToggle(feature.name)}
-                                                                className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
-                                                            />
-                                                        </div>
-                                                        <div className="ml-3 text-sm">
-                                                            <label className="font-semibold text-gray-800 cursor-pointer">{feature.name}</label>
-                                                            {feature.price && feature.price > 0 && (
-                                                                <p className="text-indigo-600 text-xs font-medium mt-0.5">
-                                                                    + Rp {new Intl.NumberFormat('id-ID').format(feature.price)}
-                                                                </p>
-                                                            )}
-                                                            {feature.estimate_days && (
-                                                                <p className="text-gray-400 text-xs">⏱ ~{feature.estimate_days} hari</p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <InputError message={errors.selected_features} className="mt-2" />
-                                        </div>
-                                    );
-                                })()}
 
                                 <div className="space-y-4">
                                     <div>
@@ -363,27 +345,10 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                     <div>
                                         <InputLabel htmlFor="deadline" value="Desired Deadline" />
                                         <TextInput id="deadline" type="date" value={data.deadline} onChange={e => setData('deadline', e.target.value)} className="mt-1 block w-full" required />
-                                        {!selectedPackage?.is_negotiable && rushFee > 0 && <p className="text-xs text-amber-600 font-bold mt-1">⚡ RUSH ORDER: +Rp 25.000/day earlier</p>}
+                                        {!isNegotiable(selectedPackage) && rushFee > 0 && <p className="text-xs text-amber-600 font-bold mt-1">⚡ RUSH ORDER: +Rp 25.000/day earlier</p>}
                                         <p className="text-xs text-gray-400 mt-1">Initial Recommendation: {selectedPackage?.duration_days || 3} days from now ({formatDuration(selectedPackage?.duration_days)})</p>
                                         <InputError message={errors.deadline} className="mt-2" />
                                     </div>
-
-                                    {selectedPackage?.is_negotiable && (
-                                        <div>
-                                            <InputLabel htmlFor="proposed_price" value="Your Proposed Budget (Rp)" />
-                                            <TextInput
-                                                id="proposed_price"
-                                                type="number"
-                                                value={data.proposed_price}
-                                                onChange={e => setData('proposed_price', e.target.value)}
-                                                className="mt-1 block w-full text-lg font-bold text-slate-800"
-                                                placeholder="Enter your budget..."
-                                                min="50000"
-                                            />
-                                            <p className="text-xs text-gray-500 mt-1">Guideline price based on features: <span className="font-semibold text-indigo-600">Rp {new Intl.NumberFormat('id-ID').format(totalPrice)}</span></p>
-                                            <InputError message={errors.proposed_price} className="mt-2" />
-                                        </div>
-                                    )}
 
                                     <div>
                                         <InputLabel htmlFor="external_link" value="External Link (Google Drive / Figma / Etc)" />
@@ -423,6 +388,150 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                             <InputError message={errors.previous_project_file} className="mt-2" />
                                         </div>
                                     </div>
+
+                                    {/* === NEGOTIATION SECTION FOR STUDENT PACKAGE === */}
+                                    {isNegotiable(selectedPackage) && (() => {
+                                        const featureList = getFeatureList(selectedPackage);
+                                        const refPrice = computeReferencePrice();
+
+                                        return (
+                                            <div className="mt-6 pt-6 border-t-2 border-dashed border-indigo-200">
+                                                {/* Negotiation Header */}
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    <span className="bg-indigo-500 text-white border-2 border-slate-900 w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] flex-shrink-0">✦</span>
+                                                    <div>
+                                                        <h4 className="text-base font-black text-slate-900">Negotiation &amp; Feature Selection</h4>
+                                                        <p className="text-xs text-indigo-600">Pilih fitur yang kamu butuhkan — harga otomatis dihitung</p>
+                                                    </div>
+                                                </div>
+
+                                                {featureList.length === 0 ? (
+                                                    <div className="p-4 border border-indigo-100 rounded-xl bg-indigo-50 mb-4">
+                                                        <p className="text-sm text-indigo-600 font-medium">💬 Fitur akan didiskusikan bersama Admin setelah proposal diajukan. Langsung isi budget yang kamu mampu di bawah.</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="mb-4">
+                                                        <div className="flex items-center justify-between mb-3">
+                                                            <label className="block font-bold text-sm text-slate-800">Pilih Fitur yang Dibutuhkan:</label>
+                                                            {data.selected_features.length > 0 && (
+                                                                <span className="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2 py-1 rounded-full border border-indigo-200">
+                                                                    {data.selected_features.length} fitur dipilih
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            {featureList.map((feature, idx) => {
+                                                                const fName = feature.name || ('Fitur ' + (idx + 1));
+                                                                const fPrice = Number(feature.price || 0);
+                                                                const fDays = feature.estimate_days || 1;
+                                                                const fDesc = feature.description || '';
+                                                                const isSelected = data.selected_features.includes(fName);
+
+                                                                return (
+                                                                    <div
+                                                                        key={idx}
+                                                                        onClick={() => handleFeatureToggle(fName)}
+                                                                        className={`relative flex items-start p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                                                                            isSelected
+                                                                                ? 'border-indigo-500 bg-indigo-50 shadow-[3px_3px_0px_0px_rgba(99,102,241,1)]'
+                                                                                : 'border-gray-200 hover:border-indigo-300 bg-white hover:shadow-sm'
+                                                                        }`}
+                                                                    >
+                                                                        {/* Checkbox */}
+                                                                        <div className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 transition-all ${
+                                                                            isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300 bg-white'
+                                                                        }`}>
+                                                                            {isSelected && (
+                                                                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                                                </svg>
+                                                                            )}
+                                                                        </div>
+                                                                        {/* Feature Info */}
+                                                                        <div className="ml-3 flex-1 min-w-0">
+                                                                            <div className="flex items-start justify-between gap-2">
+                                                                                <p className={`text-sm font-bold leading-snug ${isSelected ? 'text-indigo-800' : 'text-slate-800'}`}>{fName}</p>
+                                                                                <div className="flex-shrink-0 text-right">
+                                                                                    {fPrice > 0 ? (
+                                                                                        <p className={`text-sm font-black ${isSelected ? 'text-indigo-600' : 'text-slate-600'}`}>
+                                                                                            Rp {new Intl.NumberFormat('id-ID').format(fPrice)}
+                                                                                        </p>
+                                                                                    ) : (
+                                                                                        <p className="text-xs text-gray-400 italic">Negotiable</p>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                            {fDesc && <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{fDesc}</p>}
+                                                                            <div className="flex items-center gap-2 mt-1.5">
+                                                                                <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                                                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                                                    ~{fDays} hari
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+
+                                                        {/* Running total from features */}
+                                                        {data.selected_features.length > 0 && (
+                                                            <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border-2 border-indigo-200">
+                                                                <div className="flex items-center justify-between">
+                                                                    <div>
+                                                                        <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">Harga Referensi Fitur Dipilih</p>
+                                                                        <p className="text-xs text-indigo-500 mt-0.5">{data.selected_features.length} fitur × total estimasi</p>
+                                                                    </div>
+                                                                    <p className="text-2xl font-black text-indigo-700">
+                                                                        Rp {new Intl.NumberFormat('id-ID').format(refPrice)}
+                                                                    </p>
+                                                                </div>
+                                                                <p className="text-xs text-indigo-400 mt-2">💡 Ini adalah harga standar. Isi budget kamu di bawah (boleh lebih rendah untuk negosiasi).</p>
+                                                            </div>
+                                                        )}
+                                                        <InputError message={errors.selected_features} className="mt-2" />
+                                                    </div>
+                                                )}
+
+                                                {/* Proposed Budget */}
+                                                <div className="mt-4 p-4 bg-yellow-50 rounded-xl border-2 border-yellow-300">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <span className="text-lg">💰</span>
+                                                        <div>
+                                                            <label htmlFor="proposed_price" className="block text-sm font-black text-slate-900">Your Proposed Budget (Rp)</label>
+                                                            <p className="text-xs text-gray-500">Masukkan budget yang kamu mampu — admin akan meninjau dan merespons.</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">Rp</span>
+                                                        <input
+                                                            id="proposed_price"
+                                                            type="number"
+                                                            value={data.proposed_price}
+                                                            onChange={e => setData('proposed_price', e.target.value)}
+                                                            className="w-full pl-10 pr-4 py-3 text-xl font-black text-slate-900 border-2 border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 bg-white transition-all"
+                                                            placeholder="contoh: 150000"
+                                                            min="50000"
+                                                        />
+                                                    </div>
+                                                    {refPrice > 0 && (
+                                                        <div className="mt-2 flex items-center gap-2 flex-wrap">
+                                                            <p className="text-xs text-gray-500">
+                                                                Harga referensi: <span className="font-bold text-indigo-600">Rp {new Intl.NumberFormat('id-ID').format(refPrice)}</span>
+                                                            </p>
+                                                            {data.proposed_price > 0 && data.proposed_price < refPrice && (
+                                                                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">Di bawah referensi — admin akan negosiasi</span>
+                                                            )}
+                                                            {data.proposed_price >= refPrice && data.proposed_price > 0 && (
+                                                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200">✓ Sesuai atau di atas referensi</span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <InputError message={errors.proposed_price} className="mt-2" />
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -450,7 +559,7 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-500">Est. Time</span>
                                             <span className="font-medium">
-                                                {selectedPackage.is_negotiable ? (
+                                                {isNegotiable(selectedPackage) ? (
                                                     (() => {
                                                         const features = getFeatureList(selectedPackage);
                                                         const selected = features.filter(f => data.selected_features.includes(f.name));
@@ -470,7 +579,7 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                             </span>
                                         </div>
 
-                                        {!selectedPackage.is_negotiable ? (
+                                        {!isNegotiable(selectedPackage) ? (
                                             <>
                                                 <div className="flex justify-between items-center text-sm">
                                                     <span className="text-gray-500">Base Price</span>
@@ -494,26 +603,64 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                             </>
                                         ) : (
                                             <>
-                                                <div className="mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
-                                                    <p className="text-xs text-indigo-600 font-bold mb-1">NEGOTIATION MODE</p>
-                                                    <p className="text-sm text-gray-600">The price is negotiable. Based on your selected features:</p>
+                                                {/* NEGOTIATION MODE Badge */}
+                                                <div className="mt-4 p-4 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border-2 border-indigo-300 shadow-[2px_2px_0px_0px_rgba(99,102,241,0.4)]">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="inline-flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-black px-3 py-1 rounded-full border border-indigo-700">
+                                                            🤝 NEGOTIATION MODE
+                                                        </span>
+                                                        <span className="text-xs text-indigo-500 font-medium">Paket Pelajar</span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 mb-3">Harga berdasarkan fitur yang kamu pilih di formulir.</p>
+
+                                                    {/* Feature-based price breakdown */}
+                                                    {(() => {
+                                                        const featureList = getFeatureList(selectedPackage);
+                                                        const selected = featureList.filter(f => data.selected_features.includes(f.name));
+                                                        return selected.length > 0 ? (
+                                                            <div className="space-y-1 mb-2">
+                                                                {selected.map((f, i) => (
+                                                                    <div key={i} className="flex justify-between text-xs text-indigo-700">
+                                                                        <span className="truncate mr-2">• {f.name}</span>
+                                                                        <span className="font-semibold flex-shrink-0">Rp {new Intl.NumberFormat('id-ID').format(Number(f.price || 0))}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-xs text-indigo-400 italic mb-2">Belum ada fitur dipilih</p>
+                                                        );
+                                                    })()}
 
                                                     {rushFee > 0 && (
-                                                        <div className="flex justify-between items-center text-sm text-amber-600 font-bold mt-2 bg-amber-50 p-1 rounded">
-                                                            <span>Express Fee (Tight Deadline)</span>
+                                                        <div className="flex justify-between items-center text-xs text-amber-600 font-bold bg-amber-50 px-2 py-1.5 rounded border border-amber-200 mb-2">
+                                                            <span>⚡ Express Fee</span>
                                                             <span>+ Rp {new Intl.NumberFormat('id-ID').format(rushFee)}</span>
                                                         </div>
                                                     )}
 
-                                                    <div className="flex justify-between items-center text-lg font-bold text-indigo-700 mt-2 border-t pt-2 border-indigo-200">
-                                                        <span>Ref. Price:</span>
-                                                        <span>Rp {new Intl.NumberFormat('id-ID').format(totalPrice)}</span>
+                                                    <div className="flex justify-between items-center font-bold text-indigo-700 border-t border-indigo-200 pt-2">
+                                                        <span className="text-sm">Harga Referensi</span>
+                                                        <span className="text-lg">Rp {new Intl.NumberFormat('id-ID').format(totalPrice)}</span>
                                                     </div>
                                                 </div>
-                                                {data.proposed_price > 0 && (
-                                                    <div className="flex justify-between items-center text-xl font-black text-slate-900 mt-6 pt-6 border-t-2 border-dashed border-slate-300">
-                                                        <span>Your Offer</span>
-                                                        <span>Rp {new Intl.NumberFormat('id-ID').format(data.proposed_price)}</span>
+
+                                                {/* Your Proposed Budget in Summary */}
+                                                {data.proposed_price > 0 ? (
+                                                    <div className="mt-4 p-3 bg-yellow-50 rounded-xl border-2 border-yellow-300">
+                                                        <p className="text-xs text-yellow-700 font-bold uppercase mb-1">💰 Your Proposed Budget</p>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Ajuan kamu</span>
+                                                            <span className="text-xl font-black text-slate-900">Rp {new Intl.NumberFormat('id-ID').format(data.proposed_price)}</span>
+                                                        </div>
+                                                        {totalPrice > 0 && (
+                                                            <p className={`text-xs mt-1 font-medium ${data.proposed_price < totalPrice ? 'text-amber-600' : 'text-green-600'}`}>
+                                                                {data.proposed_price < totalPrice ? '↓ Di bawah referensi — admin akan negosiasi' : '✓ Sesuai / di atas referensi'}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="mt-4 p-3 bg-yellow-50 rounded-xl border-2 border-dashed border-yellow-300">
+                                                        <p className="text-xs text-yellow-600 font-medium text-center">💰 Isi budget ajuan kamu di formulir</p>
                                                     </div>
                                                 )}
                                             </>
@@ -522,7 +669,7 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                     </div>
                                 )}
 
-                                {!selectedPackage?.is_negotiable ? (
+                                {!isNegotiable(selectedPackage) ? (
                                     <div className="mb-8">
                                         <InputLabel value="Payment Method" className="mb-3" />
                                         <div className="grid grid-cols-2 gap-3">
@@ -552,11 +699,11 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                     className="w-full justify-center py-3 text-base flex items-center font-black rounded-xl bg-yellow-400 text-slate-900 border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
                                     disabled={processing}
                                 >
-                                    {selectedPackage?.is_negotiable ? 'Submit Proposal 🤝' : 'Pay & Secure Slot 🔒'}
+                                    {isNegotiable(selectedPackage) ? 'Submit Proposal 🤝' : 'Pay & Secure Slot 🔒'}
                                 </button>
 
                                 <p className="text-xs text-center text-gray-400 mt-4">
-                                    By clicking {selectedPackage?.is_negotiable ? 'Submit' : 'Pay'}, you agree to our Terms of Service.
+                                    By clicking {isNegotiable(selectedPackage) ? 'Submit' : 'Pay'}, you agree to our Terms of Service.
                                 </p>
                             </div>
                         </div>

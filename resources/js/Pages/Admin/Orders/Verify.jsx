@@ -352,18 +352,31 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                                     </h3>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {viewingOrder.selected_features && viewingOrder.selected_features.length > 0 && (
-                                            <div>
-                                                <p className="text-xs text-gray-500 mb-1">Requested Features:</p>
-                                                <ul className="space-y-1">
-                                                    {viewingOrder.selected_features.map((f, i) => (
-                                                        <li key={i} className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100 inline-block mr-1 mb-1">
-                                                            {f}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        )}
+                                        {(() => {
+                                            let parsedSelected = [];
+                                            if (typeof viewingOrder.selected_features === 'string') {
+                                                try {
+                                                    parsedSelected = JSON.parse(viewingOrder.selected_features);
+                                                } catch(e) { /* ignore */ }
+                                            } else if (Array.isArray(viewingOrder.selected_features)) {
+                                                parsedSelected = viewingOrder.selected_features;
+                                            }
+                                            
+                                            if (!parsedSelected || parsedSelected.length === 0) return null;
+                                            
+                                            return (
+                                                <div>
+                                                    <p className="text-xs text-gray-500 mb-1">Requested Features:</p>
+                                                    <ul className="space-y-1">
+                                                        {parsedSelected.map((f, i) => (
+                                                            <li key={i} className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100 inline-block mr-1 mb-1">
+                                                                {f}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            );
+                                        })()}
 
                                         <div>
                                             <p className="text-xs text-gray-500 mb-1">Proposed Budget:</p>
@@ -371,16 +384,52 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
 
                                             {/* System Calculation Display */}
                                             {(() => {
-                                                const features = viewingOrder.package?.addons || viewingOrder.package?.addon_features || [];
-                                                const selectedNames = viewingOrder.selected_features || [];
+                                                // Combine all possible sources for features
+                                                const featureSources = [
+                                                    ...(viewingOrder.package?.addons || []),
+                                                    ...(() => {
+                                                        const af = viewingOrder.package?.addon_features;
+                                                        if (!af) return [];
+                                                        try { return typeof af === 'string' ? JSON.parse(af) : af; } catch(e) { return []; }
+                                                    })(),
+                                                    ...(() => {
+                                                        const bf = viewingOrder.package?.features;
+                                                        if (!bf) return [];
+                                                        try { return typeof bf === 'string' ? JSON.parse(bf) : bf; } catch(e) { return []; }
+                                                    })()
+                                                ];
+                                                
+                                                let safeSelectedFeatures = [];
+                                                if (typeof viewingOrder.selected_features === 'string') {
+                                                    try {
+                                                        safeSelectedFeatures = JSON.parse(viewingOrder.selected_features);
+                                                    } catch (e) {
+                                                        safeSelectedFeatures = [];
+                                                    }
+                                                } else if (Array.isArray(viewingOrder.selected_features)) {
+                                                    safeSelectedFeatures = viewingOrder.selected_features;
+                                                }
+                                                
+                                                const selectedNames = safeSelectedFeatures;
 
                                                 let systemPrice = 0;
                                                 let totalDays = 1;
 
-                                                if (features.length > 0 && selectedNames.length > 0) {
-                                                    const selected = features.filter(f => selectedNames.includes(f.name));
-                                                    systemPrice = selected.reduce((sum, f) => sum + parseFloat(f.price), 0);
-                                                    totalDays += selected.reduce((sum, f) => sum + (parseInt(f.estimate_days) || 1), 0);
+                                                if (featureSources.length > 0 && selectedNames.length > 0) {
+                                                    const selected = featureSources.filter(f => {
+                                                        const name = typeof f === 'string' ? f : f.name;
+                                                        return selectedNames.includes(name);
+                                                    });
+                                                    
+                                                    systemPrice = selected.reduce((sum, f) => {
+                                                        const price = typeof f === 'string' ? 0 : parseFloat(f.price || 0);
+                                                        return sum + price;
+                                                    }, 0);
+                                                    
+                                                    totalDays += selected.reduce((sum, f) => {
+                                                        const days = typeof f === 'string' ? 1 : parseInt(f.estimate_days || 1);
+                                                        return sum + days;
+                                                    }, 0);
                                                 }
 
                                                 // Calculate Rush Fee (Mirroring Create.jsx logic)

@@ -47,7 +47,7 @@ export const create = async (req, res) => {
             joki_fee: Number(pkg.joki_fee || 0),
             duration_days: pkg.duration_days,
             max_revisions: pkg.max_revisions,
-            is_negotiable: pkg.is_negotiable,
+            is_negotiable: pkg.is_negotiable === true || pkg.is_negotiable === 1 || pkg.is_negotiable === 't' || pkg.is_negotiable === 'true' ? true : false,
             features: pkg.features,
             addon_features: pkg.addon_features,
             service_id: pkg.service_id,
@@ -65,6 +65,7 @@ export const create = async (req, res) => {
                 name: addon.name,
                 description: addon.description,
                 price: Number(addon.price || 0),
+                estimate_days: addon.estimate_days || 1,
                 is_active: addon.is_active,
             })),
         }));

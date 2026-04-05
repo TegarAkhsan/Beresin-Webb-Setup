@@ -29,7 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return back()->with('error', 'File terlalu besar. Harap cek kembali ukuran file Anda.');
         });
 
-        $exceptions->respond(function (\Illuminate\Http\Response $response) {
+        $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response) {
             if ($response->getStatusCode() === 419) {
                 return back()->with([
                     'message' => 'The page expired, please try again.',

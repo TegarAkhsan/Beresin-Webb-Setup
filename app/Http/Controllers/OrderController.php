@@ -16,7 +16,8 @@ class OrderController extends Controller
         $packages = Package::with([
             'service',
             'addons' => function ($query) {
-                $query->where('is_active', true);
+                // Use whereRaw to prevent SQLite-style boolean integer casting causing errors in Postgres
+                $query->whereRaw('is_active = true');
             }
         ])->get();
         $selectedPackageId = $request->query('package_id');
