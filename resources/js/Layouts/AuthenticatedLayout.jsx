@@ -6,6 +6,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import Toast from '@/Components/Toast';
 import usePushNotification from '@/Hooks/usePushNotification';
+import axios from 'axios';
 
 export default function AuthenticatedLayout({ header, children, hideNavigation = false, hideHomeLink = false }) {
     const { auth, flash } = usePage().props;

@@ -138,35 +138,46 @@ app.use('/', orderRouter);
 app.use('/', adminRouter);
 app.use('/', jokiRouter);
 
-// Notification check endpoint (polled every 5s by AdminLayout)
+// Notification check endpoint (polled every 5s by AdminLayout & AuthenticatedLayout)
 app.get('/notifications/check', async (req, res) => {
     try {
-        // Try to get auth token for actual counts
         const token = req.cookies?.auth_token;
         if (!token) {
-            return res.json({ unread_chats: 0, pending_orders: 0 });
+            return res.json({ unread_chats: 0, pending_orders: 0, new_tasks: 0 });
         }
         const jwt = await import('jsonwebtoken');
-        const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'secret');
-
-        // Only return real counts for admins
-        if (decoded.role !== 'admin') {
-            return res.json({ unread_chats: 0, pending_orders: 0 });
+        let decoded;
+        try {
+            decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'secret');
+        } catch (e) {
+            return res.json({ unread_chats: 0, pending_orders: 0, new_tasks: 0 });
         }
 
-        const [unreadChats, pendingOrders] = await Promise.all([
-            prisma.chats.count({
-                where: { is_admin_reply: false, is_read: false }
-            }),
-            prisma.orders.count({
-                where: { status: 'pending_payment', payment_proof: { not: null } }
-            })
-        ]);
+        if (decoded.role === 'admin') {
+            const [unreadChats, pendingOrders] = await Promise.all([
+                prisma.chats.count({
+                    where: { is_admin_reply: false, is_read: false }
+                }),
+                prisma.orders.count({
+                    where: { status: 'pending_payment', payment_proof: { not: null } }
+                })
+            ]);
+            return res.json({ unread_chats: unreadChats, pending_orders: pendingOrders, new_tasks: 0 });
+        }
 
-        res.json({ unread_chats: unreadChats, pending_orders: pendingOrders });
+        if (decoded.role === 'joki') {
+            const newTasks = await prisma.orders.count({
+                where: { joki_id: decoded.id, status: 'in_progress' }
+            });
+            return res.json({ unread_chats: 0, pending_orders: 0, new_tasks: newTasks });
+        }
+
+        // Regular user
+        return res.json({ unread_chats: 0, pending_orders: 0, new_tasks: 0 });
+
     } catch (e) {
-        // Silently return zeros on any error - don't break the admin page
-        res.json({ unread_chats: 0, pending_orders: 0 });
+        // Silently return zeros on any error - don't break the page
+        res.json({ unread_chats: 0, pending_orders: 0, new_tasks: 0 });
     }
 });
 
