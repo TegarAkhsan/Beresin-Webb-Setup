@@ -22,13 +22,13 @@ router.post('/joki/orders/:id/start', requireAuth, isJoki, startTask);
 
 // Upload result file (joki.orders.upload) — was MISSING → caused 404 in screenshot
 router.post('/joki/orders/:id/upload', requireAuth, isJoki,
-    upload.single('result_file'),
+    upload.single('file'),
     uploadResult
 );
 
 // Upload milestone progress (joki.orders.milestone)
 router.post('/joki/orders/:id/milestone', requireAuth, isJoki,
-    upload.single('milestone_file'),
+    upload.single('file'),
     uploadMilestone
 );
 

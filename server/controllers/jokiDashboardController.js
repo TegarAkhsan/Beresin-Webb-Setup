@@ -131,7 +131,7 @@ export const startTask = async (req, res) => {
 
 export const uploadMilestone = async (req, res) => {
     const { id } = req.params;
-    const { milestone_id, external_link, note } = req.body;
+    const { milestone_id, external_link, note, version_label } = req.body;
 
     try {
         const milestone = await prisma.order_milestones.findUnique({ where: { id: parseInt(milestone_id) } });
@@ -144,16 +144,43 @@ export const uploadMilestone = async (req, res) => {
             milestoneFileUrl = await uploadToStorage(req.file.buffer, 'beresin-uploads', fileName, req.file.mimetype);
         }
 
+        const finalLink = external_link || milestoneFileUrl || null;
+
         await prisma.order_milestones.update({
             where: { id: milestone.id },
             data: {
                 status: 'submitted',
-                submitted_link: external_link || milestoneFileUrl || null,
+                submitted_link: finalLink,
                 joki_notes: note,
                 completed_at: new Date(),
                 updated_at: new Date()
             }
         });
+
+        // Simpan versi upload milestone ke `order_files` agar customer bisa lihat riwayat
+        if (finalLink) {
+            await prisma.order_files.create({
+                data: {
+                    order_id: parseInt(id),
+                    file_path: finalLink,
+                    version_label: version_label ? `${milestone.name} - ${version_label}` : `${milestone.name} - v1`,
+                    created_at: new Date(),
+                    updated_at: new Date()
+                }
+            });
+
+            // Kirim notifikasi via order_chats ke customer
+            await prisma.order_chats.create({
+                data: {
+                    order_id: parseInt(id),
+                    user_id: req.user.id,
+                    message: `📢 Update Milestone [${milestone.name}]: Hasil pengerjaan baru telah diunggah!\nVersi: ${version_label || 'v1'}\nCatatan: ${note || '-'}\n\nSilakan cek detail milestone pada order Anda.`,
+                    is_resolved: false,
+                    created_at: new Date(),
+                    updated_at: new Date()
+                }
+            });
+        }
 
         // If last milestone → move order to review
         const nextMilestone = await prisma.order_milestones.findFirst({
@@ -166,7 +193,7 @@ export const uploadMilestone = async (req, res) => {
             });
         }
 
-        return flashRedirect(res, '/joki/dashboard', 'Milestone berhasil dikirim');
+        return flashRedirect(res, '/joki/dashboard', 'Milestone berhasil dikirim dan customer telah dinotifikasi!');
     } catch (error) {
         console.error('[UPLOAD MILESTONE ERROR]', error.message);
         return flashRedirect(res, '/joki/dashboard', 'Gagal mengirim milestone', true);
@@ -246,7 +273,7 @@ export const updateBankDetails = async (req, res) => {
 
 export const uploadResult = async (req, res) => {
     const { id } = req.params;
-    const { external_link, note } = req.body;
+    const { external_link, note, version_label } = req.body;
 
     try {
         const order = await prisma.orders.findFirst({
@@ -261,6 +288,31 @@ export const uploadResult = async (req, res) => {
             resultFileUrl = await uploadToStorage(req.file.buffer, 'beresin-uploads', fileName, req.file.mimetype);
         }
 
+        // Simpan versi upload ke `order_files` agar customer bisa lihat riwayat revisi
+        if (resultFileUrl || external_link) {
+            await prisma.order_files.create({
+                data: {
+                    order_id: parseInt(id),
+                    file_path: resultFileUrl || external_link,
+                    version_label: version_label || 'v1',
+                    created_at: new Date(),
+                    updated_at: new Date()
+                }
+            });
+
+            // Kirim notifikasi via order_chats ke customer
+            await prisma.order_chats.create({
+                data: {
+                    order_id: parseInt(id),
+                    user_id: req.user.id,
+                    message: `📢 Update Project: Hasil pengerjaan baru telah diunggah!\nVersi: ${version_label || 'v1'}\nCatatan: ${note || '-'}\n\nSilakan cek detail order Anda untuk mengunduh dan meninjau hasilnya.`,
+                    is_resolved: false,
+                    created_at: new Date(),
+                    updated_at: new Date()
+                }
+            });
+        }
+
         await prisma.orders.update({
             where: { id: parseInt(id) },
             data: {
@@ -272,7 +324,7 @@ export const uploadResult = async (req, res) => {
             }
         });
 
-        return flashRedirect(res, '/joki/dashboard', 'Hasil pekerjaan berhasil dikirim');
+        return flashRedirect(res, '/joki/dashboard', 'Hasil pekerjaan berhasil dikirim, dan customer telah dinotifikasi!');
     } catch (error) {
         console.error('[UPLOAD RESULT ERROR]', error.message);
         return flashRedirect(res, '/joki/dashboard', 'Gagal mengirim hasil pekerjaan', true);
