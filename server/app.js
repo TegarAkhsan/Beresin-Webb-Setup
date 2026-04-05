@@ -138,12 +138,36 @@ app.use('/', orderRouter);
 app.use('/', adminRouter);
 app.use('/', jokiRouter);
 
-// Notification stub (prevents 404 polling errors from frontend)
-app.get('/notifications/check', (req, res) => {
-    res.json({ notifications: [], unread_count: 0 });
-});
-app.get('/notifications/check:suffix', (req, res) => {
-    res.json({ notifications: [], unread_count: 0 });
+// Notification check endpoint (polled every 5s by AdminLayout)
+app.get('/notifications/check', async (req, res) => {
+    try {
+        // Try to get auth token for actual counts
+        const token = req.cookies?.auth_token;
+        if (!token) {
+            return res.json({ unread_chats: 0, pending_orders: 0 });
+        }
+        const jwt = await import('jsonwebtoken');
+        const decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'secret');
+
+        // Only return real counts for admins
+        if (decoded.role !== 'admin') {
+            return res.json({ unread_chats: 0, pending_orders: 0 });
+        }
+
+        const [unreadChats, pendingOrders] = await Promise.all([
+            prisma.chats.count({
+                where: { is_admin_reply: false, is_read: false }
+            }),
+            prisma.orders.count({
+                where: { status: 'pending_payment', payment_proof: { not: null } }
+            })
+        ]);
+
+        res.json({ unread_chats: unreadChats, pending_orders: pendingOrders });
+    } catch (e) {
+        // Silently return zeros on any error - don't break the admin page
+        res.json({ unread_chats: 0, pending_orders: 0 });
+    }
 });
 
 // Customer Chat API (used by ChatWidget.jsx)

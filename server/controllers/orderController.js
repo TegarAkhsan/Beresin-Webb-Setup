@@ -120,8 +120,11 @@ export const store = async (req, res) => {
             amount = parseFloat(pkg.price);
             const standardDuration = pkg.duration_days || 3;
             const now = new Date();
+            // Normalize standardDeadline to start of day to match user's date-only deadline
             const standardDeadline = new Date(now.getTime() + standardDuration * 24 * 60 * 60 * 1000);
+            standardDeadline.setHours(0, 0, 0, 0);
             const userDeadline = new Date(deadline);
+            userDeadline.setHours(0, 0, 0, 0);
 
             if (userDeadline < standardDeadline) {
                 const diffTime = Math.abs(standardDeadline - userDeadline);

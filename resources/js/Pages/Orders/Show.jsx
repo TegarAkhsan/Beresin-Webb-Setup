@@ -515,82 +515,80 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
 
                         {/* RIGHT: ORDER OVERVIEW */}
                         <div className="md:col-span-1">
-                            <div className="bg-white rounded-2xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] p-6 sticky top-6">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">Order Overview</h3>
-                                <div className="space-y-4 text-sm">
-                                    <div className="flex justify-between border-b pb-2">
-                                        <span className="text-gray-500">Order Code</span>
-                                        <span className="font-mono font-bold">{order.order_number}</span>
-                                    </div>
-                                    <div className="flex justify-between border-b pb-2">
-                                        <span className="text-gray-500">Date</span>
-                                        <span className="font-medium">{new Date(order.created_at).toLocaleDateString()}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-500 block mb-1">Package</span>
-                                        <span className="font-bold block text-gray-800">{order.package.service.name}</span>
-                                        <span className="text-indigo-600 font-bold">{order.package.name}</span>
-                                        {(() => {
-                                            let feats = order.package.features;
-                                            if (typeof feats === 'string') {
-                                                try {
-                                                    feats = JSON.parse(feats);
-                                                } catch (e) {
-                                                    console.error("Failed to parse features", e);
-                                                    feats = [];
+                            <div className="sticky top-6 flex flex-col gap-4">
+                                <div className="bg-white rounded-2xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] p-6">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-4">Order Overview</h3>
+                                    <div className="space-y-4 text-sm">
+                                        <div className="flex justify-between border-b pb-2">
+                                            <span className="text-gray-500">Order Code</span>
+                                            <span className="font-mono font-bold">{order.order_number}</span>
+                                        </div>
+                                        <div className="flex justify-between border-b pb-2">
+                                            <span className="text-gray-500">Date</span>
+                                            <span className="font-medium">{new Date(order.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500 block mb-1">Package</span>
+                                            <span className="font-bold block text-gray-800">{order.package.service.name}</span>
+                                            <span className="text-indigo-600 font-bold">{order.package.name}</span>
+                                            {(() => {
+                                                let feats = order.package.features;
+                                                if (typeof feats === 'string') {
+                                                    try {
+                                                        feats = JSON.parse(feats);
+                                                    } catch (e) {
+                                                        console.error("Failed to parse features", e);
+                                                        feats = [];
+                                                    }
                                                 }
-                                            }
 
-                                            if (Array.isArray(feats) && feats.length > 0) {
-                                                return (
-                                                    <ul className="mt-2 space-y-1">
-                                                        {feats.map((feature, index) => (
-                                                            <li key={index} className="flex items-start text-xs text-gray-600">
-                                                                <svg className="w-3 h-3 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                                                                {feature}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                );
-                                            }
-                                            return <p className="text-xs text-gray-400 italic mt-1">No specific features listed.</p>;
-                                        })()}
-                                        {Array.isArray(order.package.features) && order.package.features.length > 0 && false && ( // Keeping original logic disabled or removed
-                                            <ul className="mt-2 space-y-1"></ul>
+                                                if (Array.isArray(feats) && feats.length > 0) {
+                                                    return (
+                                                        <ul className="mt-2 space-y-1">
+                                                            {feats.map((feature, index) => (
+                                                                <li key={index} className="flex items-start text-xs text-gray-600">
+                                                                    <svg className="w-3 h-3 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                                                                    {feature}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    );
+                                                }
+                                                return <p className="text-xs text-gray-400 italic mt-1">No specific features listed.</p>;
+                                            })()}
+                                        </div>
+                                        <div className="pt-2">
+                                            <span className="text-gray-500 block mb-1">Description</span>
+                                            <p className="text-gray-700 bg-gray-50 p-3 rounded-lg text-xs leading-relaxed">
+                                                {order.description}
+                                            </p>
+                                        </div>
+
+                                        {/* Selected Add-ons / Features (Dynamic) */}
+                                        {order.selected_features && order.selected_features.length > 0 && (
+                                            <div className="pt-2 border-t mt-2">
+                                                <span className="text-gray-500 block mb-1">Selected Features</span>
+                                                <ul className="space-y-1">
+                                                    {order.selected_features.map((feature, index) => (
+                                                        <li key={index} className="flex items-center text-xs text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
+                                                            <svg className="w-3 h-3 text-indigo-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                                                            {feature}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
                                         )}
                                     </div>
-                                    <div className="pt-2">
-                                        <span className="text-gray-500 block mb-1">Description</span>
-                                        <p className="text-gray-700 bg-gray-50 p-3 rounded-lg text-xs leading-relaxed">
-                                            {order.description}
-                                        </p>
-                                    </div>
-
-                                    {/* Selected Add-ons / Features (Dynamic) */}
-                                    {order.selected_features && order.selected_features.length > 0 && (
-                                        <div className="pt-2 border-t mt-2">
-                                            <span className="text-gray-500 block mb-1">Selected Features</span>
-                                            <ul className="space-y-1">
-                                                {order.selected_features.map((feature, index) => (
-                                                    <li key={index} className="flex items-center text-xs text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
-                                                        <svg className="w-3 h-3 text-indigo-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                                                        {feature}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
 
-                            {/* BACK TO DASHBOARD BUTTON (Moved Here) */}
-                            {/* BACK TO DASHBOARD BUTTON */}
-                            <Link
-                                href={route('dashboard')}
-                                className="block w-full text-center py-3 bg-white text-slate-900 font-black rounded-lg border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all mt-6"
-                            >
-                                KEMBALI KE DASHBOARD
-                            </Link>
+                                {/* BACK TO DASHBOARD BUTTON */}
+                                <Link
+                                    href={route('dashboard')}
+                                    className="block w-full text-center py-3 bg-white text-slate-900 font-black rounded-lg border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                                >
+                                    KEMBALI KE DASHBOARD
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </div>
