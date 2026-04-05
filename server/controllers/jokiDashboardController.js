@@ -316,9 +316,7 @@ export const uploadResult = async (req, res) => {
         await prisma.orders.update({
             where: { id: parseInt(id) },
             data: {
-                result_file: resultFileUrl || order.result_file,
-                result_link: external_link || order.result_link,
-                joki_notes: note || order.joki_notes,
+                result_file: resultFileUrl || external_link || order.result_file,
                 status: 'review',
                 updated_at: new Date()
             }
@@ -340,7 +338,7 @@ export const updateLink = async (req, res) => {
     try {
         await prisma.orders.update({
             where: { id: parseInt(id) },
-            data: { result_link: link, updated_at: new Date() }
+            data: { external_link: link, updated_at: new Date() }
         });
 
         return flashRedirect(res, '/joki/dashboard', 'Link berhasil diupdate');
