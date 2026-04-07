@@ -23,8 +23,16 @@ export const shareInertiaData = async (req, res, next) => {
                 }
             });
         } catch (error) {
-            // Token is invalid or expired
-            res.clearCookie('token');
+            // Distinguish between JWT errors and Database errors
+            if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+                res.clearCookie('token');
+            } else {
+                console.error('[AUTH DATABASE ERROR]', error);
+                res.cookie('flash_error', 'System error during authentication. Please check Netlify Server Logs.');
+                // We clear token here strictly to prevent infinite loops if DB is permanently down,
+                // but at least we log it and send a flash error!
+                res.clearCookie('token'); 
+            }
         }
     }
 

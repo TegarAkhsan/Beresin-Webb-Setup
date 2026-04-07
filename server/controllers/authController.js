@@ -76,10 +76,10 @@ export const login = async (req, res) => {
     } catch (error) {
         console.error('[LOGIN ERROR DETAILS]', {
             message: error.message,
-            stack: error.stack
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
-        res.cookie('flash_error', `Login failed: ${error.message}`);
-        return res.redirect(req.get('Referer') || '/');
+        res.cookie('flash_error', `Login failed: System Error. Please check Server logs.`);
+        return res.redirect(req.get('Referer') || '/login');
     }
 }
 
