@@ -51,7 +51,6 @@ export default function Create({ auth, packages, selectedPackageId }) {
     const isNegotiable = (pkg) => {
         if (!pkg) return false;
         const v = pkg.is_negotiable;
-        console.log("DEBUG isNegotiable => pkg id:", pkg.id, "name:", pkg.name, "val:", v, "type:", typeof v);
         return v === true || v === 1 || v === '1' || v === 't' || v === 'true' || v === '1.0';
     };
 

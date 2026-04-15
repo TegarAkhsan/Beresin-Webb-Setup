@@ -23,16 +23,35 @@ export default function AuthenticatedLayout({ header, children, hideNavigation =
     const notificationSound = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTSVMAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIwAXFxcXGxsbGx8fHx8jIyMjJycnJysrKysvLy8vMzMzMzc3Nzc7Ozs7Pz8/P0NDQ0NHR0dHS0tLS09PT09TU1NTV1dXV1tbW1tfX19fY2NjY2dnZ2dra2trb29vb3Nzc3N3d3d3e3t7e39/f3+Dg4ODh4eHh4iIiIiMjIyMk5OTk5aWlpaampqan5+fn6KioqKmpqamqKioKKqqqqqurq6usLCwsLS0tLS4uLi4vLy8vMHBwcHFxcXFyc/Pz9PT09PX19fX29vb29/f39/j4+Pj5+fn5+vr6+v///////8AAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAJAMAAAAAAAAAASMDRFE9AAAA//MUZAAAAAI0AUA0AABHAAAARwAAACQAAAI0AUA0AABHAAAARwAAACQAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZAAAGkAYA0AAA3QAAAN0AAAAkAAAGkAYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZAIAGkQYA0AAA3QAAAN0AAAAkAAAGkQYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZAMAGkYYA0AAA3QAAAN0AAAAkAAAGkYYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZAYAGkgYA0AAA3QAAAN0AAAAkAAAGkgYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZAkAGkoYA0AAA3QAAAN0AAAAkAAAGkoYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZAsAGkwYA0AAA3QAAAN0AAAAkAAAGkwYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZBAAGk4YA0AAA3QAAAN0AAAAkAAAGk4YA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZBMAGlAYA0AAA3QAAAN0AAAAkAAAGlAYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZBUAGlIYA0AAA3QAAAN0AAAAkAAAGlIYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZBcAGlQYA0AAA3QAAAN0AAAAkAAAGlQYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZBgAGlYYA0AAA3QAAAN0AAAAkAAAGlYYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZBkAGlgYA0AAA3QAAAN0AAAAkAAAGlgYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZBsAGloYA0AAA3QAAAN0AAAAkAAAGloYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZCAAGlwYA0AAA3QAAAN0AAAAkAAAGlwYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZCMAGmAYA0AAA3QAAAN0AAAAkAAAGmAYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZCUAGmIYA0AAA3QAAAN0AAAAkAAAGmIYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZCcAGmQYA0AAA3QAAAN0AAAAkAAAGmQYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZCeAGmYYA0AAA3QAAAN0AAAAkAAAGmYYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZCsAGmgYA0AAA3QAAAN0AAAAkAAAGmgYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZDEAGmoYA0AAA3QAAAN0AAAAkAAAGmoYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZDMAGmwYA0AAA3QAAAN0AAAAkAAAGmwYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZDUAGnAYA0AAA3QAAAN0AAAAkAAAGnAYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZDcAGnIYA0AAA3QAAAN0AAAAkAAAGnIYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZDgAGnQYA0AAA3QAAAN0AAAAkAAAGnQYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZDkAGnYYA0AAA3QAAAN0AAAAkAAAGnYYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZDsAGngYA0AAA3QAAAN0AAAAkAAAGngYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZEEAGnoYA0AAA3QAAAN0AAAAkAAAGnoYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZEMAGnwYA0AAA3QAAAN0AAAAkAAAGnwYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZEUAGoAYA0AAA3QAAAN0AAAAkAAAGoAYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZEcAGoIYA0AAA3QAAAN0AAAAkAAAGoIYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZEgAGoQYA0AAA3QAAAN0AAAAkAAAGoQYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZEkAGoYYA0AAA3QAAAN0AAAAkAAAGoYYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZFsAGogYA0AAA3QAAAN0AAAAkAAAGogYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZGEAGooYA0AAA3QAAAN0AAAAkAAAGooYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZGMAGowYA0AAA3QAAAN0AAAAkAAAGowYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA//MUZGUAGpAYA0AAA3QAAAN0AAAAkAAAGpAYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA///MUZGcAGpIYA0AAA3QAAAN0AAAAkAAAGpIYA0AAA3QAAAN0AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
     useEffect(() => {
+        let abortController = null;
+        let retryDelay = 15000; // Start at 15s, backoff on error
+        let timeoutId = null;
+
         const checkNotifications = async () => {
+            // Skip polling when tab is not visible (e.g., user switched browser tab)
+            if (document.visibilityState !== 'visible') {
+                scheduleNext();
+                return;
+            }
+
+            // Cancel any in-flight request
+            if (abortController) abortController.abort();
+            abortController = new AbortController();
+
             try {
-                // If user is not logged in or role logic prevents, endpoint returns empty or 0
-                const response = await axios.get(route('notifications.check'));
+                const response = await axios.get(route('notifications.check'), {
+                    signal: abortController.signal,
+                    timeout: 10000 // 10s timeout per request
+                });
                 const { unread_chats, new_tasks } = response.data;
+
+                // Reset backoff on success
+                retryDelay = 15000;
 
                 // 1. Unread Chat Notification
                 setUnreadCount(prev => {
                     if (unread_chats > prev) {
-                        if (audioRef.current) audioRef.current.play().catch(e => console.log('Audio autoplay blocked', e));
+                        if (audioRef.current) audioRef.current.play().catch(() => {});
                         setShowChatToast(true);
                         setTimeout(() => setShowChatToast(false), 5000);
                     }
@@ -42,7 +61,7 @@ export default function AuthenticatedLayout({ header, children, hideNavigation =
                 // 2. New Task Notification (For Joki)
                 setNewTaskCount(prev => {
                     if (new_tasks > prev) {
-                        if (audioRef.current) audioRef.current.play().catch(e => console.log('Audio autoplay blocked', e));
+                        if (audioRef.current) audioRef.current.play().catch(() => {});
                         setShowTaskToast(true);
                         setTimeout(() => setShowTaskToast(false), 5000);
                     }
@@ -50,18 +69,38 @@ export default function AuthenticatedLayout({ header, children, hideNavigation =
                 });
 
             } catch (error) {
-                // Silent fail for unauthenticated or network issues
-                // console.error('Notification check failed', error);
+                // Ignore cancelled requests (AbortController)
+                if (axios.isCancel(error) || error.name === 'CanceledError' || error.name === 'AbortError') return;
+
+                // Exponential backoff on network error (cap at 60s)
+                retryDelay = Math.min(retryDelay * 2, 60000);
+            }
+
+            scheduleNext();
+        };
+
+        const scheduleNext = () => {
+            timeoutId = setTimeout(checkNotifications, retryDelay);
+        };
+
+        // Listen for tab visibility changes to resume immediately when user returns
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                clearTimeout(timeoutId);
+                retryDelay = 15000; // Reset delay when tab becomes active
+                checkNotifications();
             }
         };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         // Initial check
         checkNotifications();
 
-        // Poll every 5 seconds
-        const interval = setInterval(checkNotifications, 5000);
-
-        return () => clearInterval(interval);
+        return () => {
+            clearTimeout(timeoutId);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if (abortController) abortController.abort();
+        };
     }, []);
 
     return (
