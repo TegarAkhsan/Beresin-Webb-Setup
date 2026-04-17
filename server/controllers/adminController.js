@@ -7,7 +7,7 @@ const generateInvoiceNumber = () => 'INV-' + Math.random().toString(36).substrin
 const flashRedirect = (res, url, message, isError = false) => {
     const cookieName = isError ? 'flash_error' : 'flash_success';
     res.cookie(cookieName, message);
-    return res.redirect(url);
+    return res.redirect(303, url);
 };
 
 // Helper: serialize dates in order objects

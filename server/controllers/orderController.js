@@ -5,7 +5,7 @@ const generateOrderNumber = () => 'ORD-' + Math.random().toString(36).substring(
 
 const flashRedirect = (res, url, message, isError = false) => {
     res.cookie(isError ? 'flash_error' : 'flash_success', message);
-    return res.redirect(url);
+    return res.redirect(303, url);
 };
 
 // Helper: serialize Prisma order to JSON-safe object

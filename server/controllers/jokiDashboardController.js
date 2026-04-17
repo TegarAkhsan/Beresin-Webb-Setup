@@ -8,8 +8,9 @@ const calculateJokiCommission = (order) => {
 };
 
 const flashRedirect = (res, url, message, isError = false) => {
-    res.cookie(isError ? 'flash_error' : 'flash_success', message);
-    return res.redirect(url);
+    const cookieName = isError ? 'flash_error' : 'flash_success';
+    res.cookie(cookieName, message);
+    return res.redirect(303, url);
 };
 
 // Serialize Prisma DateTime fields to ISO strings
