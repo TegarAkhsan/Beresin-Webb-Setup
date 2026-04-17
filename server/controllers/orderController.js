@@ -392,6 +392,7 @@ export const review = async (req, res) => {
                 users_orders_joki_idTousers: true,
                 users_orders_user_idTousers: true,
                 order_milestones: { orderBy: { sort_order: 'asc' } },
+                order_files: { orderBy: { created_at: 'asc' } },
             }
         });
 
@@ -446,6 +447,13 @@ export const review = async (req, res) => {
                     created_at: m.created_at instanceof Date ? m.created_at.toISOString() : m.created_at,
                     updated_at: m.updated_at instanceof Date ? m.updated_at.toISOString() : m.updated_at,
                     completed_at: m.completed_at instanceof Date ? m.completed_at.toISOString() : null,
+                })),
+                files: (order.order_files || []).map(f => ({
+                    id: f.id,
+                    file_path: f.file_path,
+                    version_label: f.version_label,
+                    note: f.note || null,
+                    created_at: f.created_at instanceof Date ? f.created_at.toISOString() : f.created_at,
                 })),
             },
             whatsapp_number: settings.whatsapp_number || null,

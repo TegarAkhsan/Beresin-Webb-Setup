@@ -296,6 +296,7 @@ export const uploadResult = async (req, res) => {
                     order_id: parseInt(id),
                     file_path: resultFileUrl || external_link,
                     version_label: version_label || 'v1',
+                    note: note || null,
                     created_at: new Date(),
                     updated_at: new Date()
                 }

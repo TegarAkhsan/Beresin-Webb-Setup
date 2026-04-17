@@ -100,7 +100,9 @@ export default function Review({ auth, order }) {
     // Helper: Determine file/link/note to show
     const displayFile = order.result_file || pendingMilestone?.file_path;
     const displayLink = pendingMilestone?.submitted_link;
-    const displayNote = order.result_note || pendingMilestone?.joki_notes;
+    // Ambil note dari file terbaru di order.files (hasil upload joki), fallback ke milestone's joki_notes
+    const latestFile = order.files && order.files.length > 0 ? order.files[order.files.length - 1] : null;
+    const displayNote = latestFile?.note || pendingMilestone?.joki_notes || null;
     const versionLabel = pendingMilestone?.version_label;
 
     return (
