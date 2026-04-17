@@ -632,6 +632,9 @@ export default function Create({ auth, packages, selectedPackageId, whatsapp_num
                                                     (() => {
                                                         const features = getFeatureList(selectedPackage);
                                                         const selected = features.filter(f => data.selected_features.includes(f.name));
+                                                        if (selected.length === 0 && data.custom_description.trim() !== '') {
+                                                            return <span className="text-indigo-600 italic">Menunggu Admin</span>;
+                                                        }
                                                         const days = 1 + selected.reduce((sum, f) => sum + (parseInt(f.estimate_days) || 1), 0);
                                                         return days + " - " + (days + 2) + " Days";
                                                     })()
@@ -695,6 +698,13 @@ export default function Create({ auth, packages, selectedPackageId, whatsapp_num
                                                                     </div>
                                                                 ))}
                                                             </div>
+                                                        ) : data.custom_description.trim() !== '' ? (
+                                                            <div className="space-y-1 mb-2">
+                                                                <div className="flex justify-between text-xs text-indigo-700">
+                                                                    <span className="truncate mr-2">• Request Fitur Custom</span>
+                                                                    <span className="font-semibold flex-shrink-0 italic text-indigo-400">TBD</span>
+                                                                </div>
+                                                            </div>
                                                         ) : (
                                                             <p className="text-xs text-indigo-400 italic mb-2">Belum ada fitur dipilih</p>
                                                         );
@@ -709,7 +719,9 @@ export default function Create({ auth, packages, selectedPackageId, whatsapp_num
 
                                                     <div className="flex justify-between items-center font-bold text-indigo-700 border-t border-indigo-200 pt-2">
                                                         <span className="text-sm">Harga Referensi</span>
-                                                        <span className="text-lg">Rp {new Intl.NumberFormat('id-ID').format(totalPrice)}</span>
+                                                        <span className="text-lg">
+                                                            {totalPrice > 0 ? `Rp ${new Intl.NumberFormat('id-ID').format(totalPrice)}` : <span className="text-sm italic text-indigo-500">Sesuai Kesepakatan</span>}
+                                                        </span>
                                                     </div>
                                                 </div>
 
@@ -734,7 +746,6 @@ export default function Create({ auth, packages, selectedPackageId, whatsapp_num
                                                 )}
                                             </>
                                         )}
-
                                     </div>
                                 )}
 
