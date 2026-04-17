@@ -479,12 +479,14 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                                     <>
                                                         <p className="text-gray-600 text-sm mb-4">Please download and review your result below.</p>
                                                         <div className="flex flex-col gap-3 justify-center items-center">
-                                                            <a href={`/storage/${order.result_file}`} target="_blank" className="inline-block bg-indigo-600 text-white px-8 py-3 rounded-full font-bold border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
-                                                                Download Result 📂
-                                                            </a>
+                                                            {order.result_file && (
+                                                                <a href={order.result_file.startsWith('http') ? order.result_file : `/storage/${order.result_file}`} target="_blank" className="inline-block bg-indigo-600 text-white px-8 py-3 rounded-full font-bold border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
+                                                                    Download Bukti / File 📂
+                                                                </a>
+                                                            )}
                                                             {order.external_link && (
-                                                                <a href={order.external_link} target="_blank" className="text-indigo-600 underline font-semibold hover:text-indigo-800">
-                                                                    Open External Link 🔗
+                                                                <a href={order.external_link} target="_blank" className="text-indigo-600 underline font-semibold mt-2 hover:text-indigo-800 transition-colors">
+                                                                    Visit Upload Link 🔗
                                                                 </a>
                                                             )}
                                                         </div>

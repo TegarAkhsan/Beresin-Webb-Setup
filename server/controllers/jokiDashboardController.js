@@ -317,7 +317,8 @@ export const uploadResult = async (req, res) => {
         await prisma.orders.update({
             where: { id: parseInt(id) },
             data: {
-                result_file: resultFileUrl || external_link || order.result_file,
+                result_file: resultFileUrl || order.result_file,
+                external_link: external_link || order.external_link,
                 result_note: note || null,
                 status: 'review',
                 updated_at: new Date()

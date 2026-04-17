@@ -233,6 +233,7 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                                 user={auth.user}
                                 stats={stats}
                                 activeTasks={activeTasks}
+                                reviewTasks={reviewTasks}
                                 openDetailModal={openDetailModal}
                                 openUploadModal={openUploadModal}
                                 CountdownTimer={CountdownTimer}
@@ -607,17 +608,16 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                             )
                         )}
 
-                        {/* Link Input - Hide for milestone if not needed, or keep optional */}
                         <div className="mb-6">
                             <label className="block text-sm font-bold text-gray-700 mb-2">
-                                External Resource Link (Optional)
+                                Upload Link (Optional)
                             </label>
                             <TextInput
                                 type="url"
                                 name="external_link"
                                 autoComplete="off"
                                 className="w-full"
-                                placeholder="https://..."
+                                placeholder="Google Drive, Dropbox, Figma Link..."
                                 value={data.external_link}
                                 onChange={(e) => setData('external_link', e.target.value)}
                             />

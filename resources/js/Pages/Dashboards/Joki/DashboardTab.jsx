@@ -25,7 +25,7 @@ const StatCard = ({ title, value, subtitle, icon, color }) => {
     );
 };
 
-export default function DashboardTab({ user, stats, activeTasks, openDetailModal, openUploadModal, CountdownTimer }) {
+export default function DashboardTab({ user, stats, activeTasks, reviewTasks, openDetailModal, openUploadModal, CountdownTimer }) {
 
     const renderTask = (task) => {
         const isRevision = task.status === 'revision';
@@ -170,7 +170,7 @@ export default function DashboardTab({ user, stats, activeTasks, openDetailModal
                                     isReview ? 'bg-purple-100 text-purple-800' :
                                         isFinalization ? 'bg-indigo-100 text-indigo-800' :
                                             'bg-blue-100 text-blue-800'}`}>
-                                {isRevision ? 'Revision Requested' : isReview ? 'In Review' : isFinalization ? 'Finalization Phase' : 'In Progress'}
+                                {isRevision ? 'Revision Requested' : isReview ? 'In Client Review' : isFinalization ? 'Finalization Phase' : 'In Progress'}
                             </span>
                         </div>
                     )}
@@ -182,7 +182,7 @@ export default function DashboardTab({ user, stats, activeTasks, openDetailModal
     const revisions = activeTasks.filter(t => t.status === 'revision');
     const finalization = activeTasks.filter(t => t.status === 'finalization');
     const inProgress = activeTasks.filter(t => t.status === 'in_progress');
-    const inReview = activeTasks.filter(t => t.status === 'review');
+    const inReview = reviewTasks || [];
 
     return (
         <div className="space-y-8 animate-fade-in-up">
@@ -233,7 +233,7 @@ export default function DashboardTab({ user, stats, activeTasks, openDetailModal
                         {finalization.length > 0 && <span className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">{finalization.length} Finalization</span>}
                         {revisions.length > 0 && <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">{revisions.length} Revisions</span>}
                         {inProgress.length > 0 && <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">{inProgress.length} In Progress</span>}
-                        {inReview.length > 0 && <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">{inReview.length} In Review</span>}
+                        {inReview.length > 0 && <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">{inReview.length} In Client Review</span>}
                     </div>
                 </div>
 
@@ -273,7 +273,7 @@ export default function DashboardTab({ user, stats, activeTasks, openDetailModal
 
                             {inReview.length > 0 && (
                                 <div className="bg-gray-50/30">
-                                    {(revisions.length > 0 || inProgress.length > 0 || finalization.length > 0) && <div className="px-6 py-2 bg-purple-50 text-purple-800 text-xs font-black uppercase tracking-widest border-l-4 border-purple-200">Waiting for Review</div>}
+                                    <div className="px-6 py-2 bg-purple-50 text-purple-800 text-xs font-black uppercase tracking-widest border-l-4 border-purple-200">In Client Review</div>
                                     {inReview.map(renderTask)}
                                 </div>
                             )}
