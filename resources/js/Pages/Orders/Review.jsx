@@ -535,27 +535,13 @@ export default function Review({ auth, order }) {
                         e.preventDefault();
                         const isPaid = order.revision_count >= (order.package?.max_revisions || 3);
 
-                        // Manually constructing data since we use useForm or similar upstream
-                        // We need to pass 'paid_revision' to the post request.
-                        // Since handleRevision (the original handler) essentially calls postRevision(route('orders.revision', order.id)), 
-                        // we can try to hijack it or just use the post method directly if we have access.
-                        // Assuming handleRevision is simple, let's redefine the submit here or modify handleRevision.
-                        // Since I can't see handleRevision, I'll assume I can just use the setData ('paid_revision', true) before submit?
-                        // But setData is async/state based. 
-
-                        // Better approach: Create a local handler here or use the existing one with a modification.
-                        // I'll call handleRevision(e, isPaid) if I can modify handleRevision signature? 
-
-                        // Let's rely on adding a hidden input if using standard form submit, 
-                        // BUT Inertia useForm helper usually validates fields.
-                        // I will update this onSubmit to explicitly call the route with the extra data.
-
-                        transformRevision((data) => ({
-                            ...data,
-                            paid_revision: isPaid
-                        }));
-
+                        // Gunakan method post langsung tanpa transformRevision
+                        // karena transformRevision berisiko asinkron sebelum disubmit
                         postRevision(route('orders.revision', order.id), {
+                            data: {
+                                ...revisionData,
+                                paid_revision: isPaid
+                            },
                             onSuccess: () => {
                                 setModalType(null);
                                 resetRevision();
@@ -568,8 +554,10 @@ export default function Review({ auth, order }) {
                                 className="w-full rounded-xl border-slate-300 shadow-sm focus:border-slate-900 focus:ring-slate-900 h-32"
                                 placeholder="Jelaskan bagian mana yang perlu diperbaiki..."
                                 required
+                                value={revisionData.revision_reason}
                                 onChange={(e) => setRevisionData('revision_reason', e.target.value)}
                             ></textarea>
+                            {revisionErrors.revision_reason && <p className="text-red-600 text-xs mt-1">{revisionErrors.revision_reason}</p>}
                         </div>
 
                         <div className="mb-6">

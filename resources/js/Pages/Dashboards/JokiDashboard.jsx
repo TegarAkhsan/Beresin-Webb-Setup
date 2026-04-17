@@ -318,13 +318,13 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                                     </div>
 
                                     {/* Customer Notes */}
-                                    {previewTask.notes && (
+                                    {(previewTask.notes || previewTask.revision_reason) && (
                                         <div className="bg-yellow-50 rounded-xl p-5 border border-yellow-200">
                                             <h3 className="font-bold text-yellow-800 text-xs uppercase tracking-wide mb-3 flex items-center gap-2">
-                                                <span>📌</span> Catatan Customer
+                                                <span>📌</span> {previewTask.status === 'revision' ? 'Catatan Revisi Customer' : 'Catatan Customer'}
                                             </h3>
                                             <p className="text-sm text-yellow-900 leading-relaxed whitespace-pre-wrap">
-                                                {previewTask.notes}
+                                                {previewTask.status === 'revision' ? previewTask.revision_reason : previewTask.notes}
                                             </p>
                                         </div>
                                     )}
@@ -441,6 +441,25 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Customer Notes & Revision */}
+                                {(detailTask.notes || detailTask.revision_reason) && (
+                                    <div>
+                                        <h3 className="font-bold text-gray-700 mb-2">Customer Notes</h3>
+                                        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                            {detailTask.status === 'revision' && detailTask.revision_reason ? (
+                                                <>
+                                                    <h4 className="text-xs font-bold text-red-700 uppercase mb-1">Catatan Revisi</h4>
+                                                    <p className="text-sm text-yellow-900 whitespace-pre-wrap leading-relaxed">{detailTask.revision_reason}</p>
+                                                </>
+                                            ) : (
+                                                detailTask.notes && (
+                                                    <p className="text-sm text-yellow-900 whitespace-pre-wrap leading-relaxed">{detailTask.notes}</p>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Client Assets Section */}
                                 {(detailTask.reference_file || detailTask.previous_project_file || detailTask.external_link) && (
@@ -726,7 +745,7 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                         </div>
 
                         {/* ── Version Label & Note ─────────────────────── */}
-                        uat<div className="pt-4 mb-4">
+                        uat <div className="pt-4 mb-4">
                             <InputLabel value="Version Label" className="mb-2" />
                             <TextInput
                                 type="text"

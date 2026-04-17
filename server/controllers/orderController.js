@@ -586,11 +586,21 @@ export const acceptResult = async (req, res) => {
 export const requestRevision = async (req, res) => {
     const { id } = req.params;
     const { revision_reason } = req.body;
+    
+    // DEBUG: Look at incoming payload
+    console.log(`[DEBUG REVISION] Body:`, req.body);
+    console.log(`[DEBUG REVISION] File:`, req.file ? req.file.originalname : 'none');
+
     try {
         const order = await prisma.orders.findFirst({
             where: { OR: [{ order_number: id }, { id: isNaN(parseInt(id)) ? -1 : parseInt(id) }] }
         });
         if (!order) return res.status(404).send('Order not found');
+
+        if (!revision_reason) {
+            console.warn('[WARN REVISION] revision_reason is empty or missing from req.body!');
+            // Even if empty, we will accept it for now, but log it.
+        }
 
         const dataUpdate = {
             status: 'revision',
@@ -613,8 +623,9 @@ export const requestRevision = async (req, res) => {
 
         return flashRedirect(res, `/orders/${order.order_number}`, 'Permintaan revisi berhasil dikirim.');
     } catch (error) {
-        console.error('Request Revision Error', error);
-        return flashRedirect(res, `/orders/${id}`, 'Gagal mengirim permintaan revisi', true);
+        console.error('[REQUEST REVISION ERROR]', error);
+        // Meneruskan error.message ke flash message agar terlihat di layar jika submit gagal!
+        return flashRedirect(res, `/orders/${id}`, `Gagal: ${error.message}`, true);
     }
 };
 
