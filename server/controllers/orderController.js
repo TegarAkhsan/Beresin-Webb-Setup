@@ -600,7 +600,10 @@ export const requestRevision = async (req, res) => {
         };
 
         if (req.file) {
-            dataUpdate.revision_file = req.file.path.replace(/\\/g, '/').replace('public/', '');
+            const f = req.file;
+            const ext = f.originalname.split('.').pop();
+            const fileName = `orders/revision-${order.user_id || order.id}-${Date.now()}.${ext}`;
+            dataUpdate.revision_file = await uploadToStorage(f.buffer, 'beresin-uploads', fileName, f.mimetype);
         }
 
         await prisma.orders.update({
