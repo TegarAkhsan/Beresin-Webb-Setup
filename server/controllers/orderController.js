@@ -592,14 +592,20 @@ export const requestRevision = async (req, res) => {
         });
         if (!order) return res.status(404).send('Order not found');
 
+        const dataUpdate = {
+            status: 'revision',
+            revision_reason: revision_reason || null,
+            revision_count: (order.revision_count || 0) + 1,
+            updated_at: new Date()
+        };
+
+        if (req.file) {
+            dataUpdate.revision_file = req.file.path.replace(/\\/g, '/').replace('public/', '');
+        }
+
         await prisma.orders.update({
             where: { id: order.id },
-            data: {
-                status: 'revision',
-                revision_reason: revision_reason || null,
-                revision_count: (order.revision_count || 0) + 1,
-                updated_at: new Date()
-            }
+            data: dataUpdate
         });
 
         return flashRedirect(res, `/orders/${order.order_number}`, 'Permintaan revisi berhasil dikirim.');

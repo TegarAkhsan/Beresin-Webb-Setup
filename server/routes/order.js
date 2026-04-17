@@ -47,7 +47,10 @@ router.post('/orders/:id/cancel', requireAuth, cancel);
 router.post('/orders/:id/accept', requireAuth, acceptResult);
 
 // Request revision (orders.revision)
-router.post('/orders/:id/revision', requireAuth, requestRevision);
+router.post('/orders/:id/revision', requireAuth,
+    withUpload(upload.single('revision_file')),
+    requestRevision
+);
 
 // Request refund (orders.refund)
 router.post('/orders/:id/refund', requireAuth, requestRefund);
