@@ -569,6 +569,9 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                                 </div>
                                             )}
 
+                                        </div>
+                                    )}
+
                                     {/* Pesan Revisi dipisah dari container Result Available */}
                                     {order.status === 'revision' && (
                                         <div className="bg-orange-100 p-4 rounded-lg mt-4 text-center border border-orange-200">
