@@ -109,11 +109,12 @@ model order_chats {
 model order_files {
   id            Int       @id @default(autoincrement())
   order_id      Int
-  file_path     String
+  file_path     String?
   version_label String
   created_at    DateTime?
   updated_at    DateTime?
   note          String?
+  proof_images  String?
   orders        orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 

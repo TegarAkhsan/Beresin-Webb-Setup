@@ -5,18 +5,22 @@ import {
     requestRefund, uploadAdditionalPayment
 } from '../controllers/orderController.js';
 import { requireAuth } from '../middleware/inertiaMiddleware.js';
-import { upload } from '../middleware/upload.js';
+import { upload, handleMulterError } from '../middleware/upload.js';
 
 const router = express.Router();
+
+// Wrapper helper untuk multer + error handler
+const withUpload = (multerMiddleware) => (req, res, next) =>
+    multerMiddleware(req, res, (err) => handleMulterError(err, req, res, next));
 
 // Create order (orders.create / orders.store)
 router.get('/orders/create', requireAuth, create);
 router.post('/orders', requireAuth,
-    upload.fields([
-        { name: 'reference_file', maxCount: 1 },
+    withUpload(upload.fields([
+        { name: 'reference_file',       maxCount: 1 },
         { name: 'previous_project_file', maxCount: 1 },
-        { name: 'student_card', maxCount: 1 }
-    ]),
+        { name: 'student_card',         maxCount: 1 },
+    ])),
     store
 );
 
@@ -30,7 +34,11 @@ router.get('/orders/:id/review', requireAuth, review);
 router.get('/orders/:id/invoice', requireAuth, downloadInvoice);
 
 // Update / payment proof upload (orders.update)
-router.post('/orders/:id', requireAuth, upload.single('payment_proof'), update);
+// Bukti pembayaran adalah gambar → akan dikompres otomatis
+router.post('/orders/:id', requireAuth,
+    withUpload(upload.single('payment_proof')),
+    update
+);
 
 // Cancel order (orders.cancel)
 router.post('/orders/:id/cancel', requireAuth, cancel);
@@ -46,7 +54,7 @@ router.post('/orders/:id/refund', requireAuth, requestRefund);
 
 // Upload additional payment (orders.additional-payment)
 router.post('/orders/:id/additional-payment', requireAuth,
-    upload.single('additional_payment_proof'),
+    withUpload(upload.single('additional_payment_proof')),
     uploadAdditionalPayment
 );
 

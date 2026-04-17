@@ -35,9 +35,12 @@ export default function Review({ auth, order }) {
 
     const isImage = (path) => {
         if (!path) return false;
-        const ext = path.split('.').pop().toLowerCase();
-        return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+        const ext = path.split('.').pop().toLowerCase().split('?')[0];
+        return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp'].includes(ext);
     };
+
+    // Alias: cek apakah file adalah gambar (dipakai untuk decided download link visibility)
+    const isImageFile = isImage;
 
     const handleAccept = (e) => {
         e.preventDefault();
@@ -163,66 +166,86 @@ export default function Review({ auth, order }) {
                     <div className="grid lg:grid-cols-3 gap-8">
                         {/* LEFT: PREVIEW AREA */}
                         <div className="lg:col-span-2 space-y-6">
-                            {/* File / Image / Link Preview */}
+                        {/* File / Image / Link Preview */}
                             <div className="bg-white rounded-[2rem] border-2 border-slate-900 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] overflow-hidden">
-                                <div className="p-6 border-b-2 border-slate-900 bg-slate-50 flex justify-between items-center">
+                                <div className="p-6 border-b-2 border-slate-900 bg-slate-50 flex justify-between items-center flex-wrap gap-3">
                                     <h3 className="font-black text-xl text-slate-900">Preview Deliverable</h3>
-                                    {displayFile && (
+                                    {/* Download link untuk file pengerjaan */}
+                                    {(displayFile && !isImageFile(displayFile)) && (
                                         <a href={getFileUrl(displayFile)} target="_blank" className="font-bold text-blue-600 hover:underline flex items-center gap-2">
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                            Download File
+                                            Download File Pengerjaan
                                         </a>
                                     )}
                                 </div>
-                                <div className="p-8 flex flex-col items-center justify-center min-h-[400px] bg-slate-100 gap-6">
-                                    {/* File Display */}
+
+                                {/* ── Gallery Screenshot / Proof Images ── */}
+                                {latestFile?.proof_images && latestFile.proof_images.length > 0 && (
+                                    <div className="p-6 border-b border-slate-100">
+                                        <p className="text-sm font-bold text-slate-600 uppercase tracking-wide mb-3">
+                                            📸 Screenshot / Bukti Pengerjaan ({latestFile.proof_images.length} gambar)
+                                        </p>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                            {latestFile.proof_images.map((imgUrl, idx) => (
+                                                <a key={idx} href={imgUrl} target="_blank" rel="noreferrer"
+                                                    className="block aspect-square rounded-xl overflow-hidden border-2 border-slate-200 hover:border-blue-400 transition-all hover:shadow-md group">
+                                                    <img
+                                                        src={imgUrl}
+                                                        alt={`Screenshot ${idx + 1}`}
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                    />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ── File Pengerjaan Preview ── */}
+                                <div className="p-8 flex flex-col items-center justify-center min-h-[300px] bg-slate-100 gap-6">
                                     {displayFile ? (
                                         isImage(displayFile) ? (
-                                            <img src={getFileUrl(displayFile)} alt="Result Preview" className="max-w-full max-h-[600px] rounded-xl shadow-lg border-2 border-slate-200" />
+                                            <img src={getFileUrl(displayFile)} alt="Result Preview" className="max-w-full max-h-[500px] rounded-xl shadow-lg border-2 border-slate-200" />
                                         ) : (
                                             <div className="text-center">
-                                                <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-slate-300">
-                                                    <svg className="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                <div className="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-slate-300">
+                                                    <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                                 </div>
-                                                <p className="text-slate-500 font-bold mb-2">File Format Not Supported for Preview</p>
-                                                <a href={getFileUrl(displayFile)} target="_blank" className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition">Download to View</a>
+                                                <p className="text-slate-500 font-bold mb-3">File Format Not Supported for Preview</p>
+                                                <a href={getFileUrl(displayFile)} target="_blank"
+                                                    className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition">
+                                                    Download to View
+                                                </a>
                                             </div>
                                         )
-                                    ) : (
-                                        !displayLink && (
-                                            <div className="text-center text-slate-400">
-                                                <svg className="w-16 h-16 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                                No file or link provided
-                                            </div>
-                                        )
-                                    )}
-
-
+                                    ) : (!displayLink && (!latestFile?.proof_images || latestFile.proof_images.length === 0)) ? (
+                                        <div className="text-center text-slate-400">
+                                            <svg className="w-16 h-16 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                            <p>Belum ada file atau gambar yang dikirim</p>
+                                        </div>
+                                    ) : null}
                                 </div>
+
+                                {/* ── External Link dari Joki ── */}
+                                {(displayLink || order.external_link) && (
+                                    <div className="p-5 border-t border-slate-100 bg-blue-50/50">
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">🔗 Link yang Dikirimkan Joki</p>
+                                        <a href={displayLink || order.external_link} target="_blank" rel="noreferrer"
+                                            className="flex items-center gap-3 text-blue-600 hover:text-blue-800 group">
+                                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                            </div>
+                                            <span className="font-bold underline break-all text-sm line-clamp-2">{displayLink || order.external_link}</span>
+                                        </a>
+                                    </div>
+                                )}
+
+                                {/* ── Joki's Note ── */}
                                 <div className="p-6 bg-slate-50 border-t-2 border-slate-900">
                                     <p className="text-slate-500 text-sm mb-1 font-bold">Joki's Note:</p>
                                     <p className="text-slate-900">{displayNote || "No notes provided."}</p>
                                 </div>
                             </div>
 
-                            {/* Link Display (Moved Outside) */}
-                            {displayLink && (
-                                <div className="bg-white rounded-[2rem] border-2 border-slate-900 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] p-6">
-                                    <h3 className="font-black text-xl text-slate-900 mb-4">External Resource Link</h3>
-                                    <div className="w-full bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                        <a href={displayLink} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-blue-600 hover:bg-blue-100/50 p-2 rounded-lg transition group">
-                                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform shadow-sm flex-shrink-0">
-                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                            </div>
-                                            <div className="overflow-hidden">
-                                                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Open Link:</p>
-                                                <span className="font-bold break-all underline decoration-blue-300 underline-offset-2 block text-sm sm:text-base truncate">{displayLink}</span>
-                                            </div>
-                                        </a>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
 
                         {/* RIGHT: ACTION CARD */}
                         <div className="space-y-6">

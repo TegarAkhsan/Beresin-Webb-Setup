@@ -43,6 +43,7 @@
         "nodemailer": "^8.0.4",
         "pg": "^8.12.0",
         "serverless-http": "^4.0.0",
+        "sharp": "^0.34.5",
         "ziggy-js": "^2.6.2"
     }
 }

@@ -448,13 +448,20 @@ export const review = async (req, res) => {
                     updated_at: m.updated_at instanceof Date ? m.updated_at.toISOString() : m.updated_at,
                     completed_at: m.completed_at instanceof Date ? m.completed_at.toISOString() : null,
                 })),
-                files: (order.order_files || []).map(f => ({
-                    id: f.id,
-                    file_path: f.file_path,
-                    version_label: f.version_label,
-                    note: f.note || null,
-                    created_at: f.created_at instanceof Date ? f.created_at.toISOString() : f.created_at,
-                })),
+                files: (order.order_files || []).map(f => {
+                    let proofImages = [];
+                    if (f.proof_images) {
+                        try { proofImages = JSON.parse(f.proof_images); } catch (e) { proofImages = []; }
+                    }
+                    return {
+                        id: f.id,
+                        file_path: f.file_path || null,
+                        version_label: f.version_label,
+                        note: f.note || null,
+                        proof_images: proofImages,
+                        created_at: f.created_at instanceof Date ? f.created_at.toISOString() : f.created_at,
+                    };
+                }),
             },
             whatsapp_number: settings.whatsapp_number || null,
             qris_image: settings.qris_image || null,

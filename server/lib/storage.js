@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { isImageFile, compressImage } from './imageProcessor.js';
 
 let _supabase = null;
 
@@ -19,25 +20,48 @@ function getSupabaseClient() {
 }
 
 /**
- * Upload a file buffer to Supabase Storage
- * @param {Buffer} buffer  - File buffer from multer memoryStorage
- * @param {string} bucket  - Bucket name (e.g. 'beresin-uploads')
- * @param {string} fileName - Unique file path
- * @param {string} mimeType - MIME type of the file
- * @returns {string} Public URL of the uploaded file
+ * Upload a file buffer to Supabase Storage.
+ * Gambar akan otomatis dikompres ke WebP sebelum diupload.
+ *
+ * @param {Buffer} buffer    - File buffer dari multer memoryStorage
+ * @param {string} bucket    - Bucket name (e.g. 'beresin-uploads')
+ * @param {string} fileName  - Unique file path (tanpa ekstensi jika gambar — akan diganti .webp)
+ * @param {string} mimeType  - MIME type dari file
+ * @param {object} options   - Opsi kompresi { maxWidth, maxHeight, skipCompression }
+ * @returns {string}         - Public URL file yang diupload
  */
-export async function uploadToStorage(buffer, bucket, fileName, mimeType) {
+export async function uploadToStorage(buffer, bucket, fileName, mimeType, options = {}) {
     const supabase = getSupabaseClient();
 
     if (!supabase) {
         throw new Error('Supabase Storage belum dikonfigurasi. Tambahkan SUPABASE_URL dan SUPABASE_SERVICE_KEY ke Netlify Environment Variables.');
     }
 
+    let uploadBuffer = buffer;
+    let uploadMime   = mimeType;
+    let uploadPath   = fileName;
+
+    // --- Kompresi Otomatis untuk Gambar ---
+    if (!options.skipCompression && isImageFile(mimeType, fileName)) {
+        const result = await compressImage(buffer, mimeType, fileName, {
+            maxWidth:  options.maxWidth  || 1920,
+            maxHeight: options.maxHeight || 1920,
+        });
+
+        uploadBuffer = result.buffer;
+        uploadMime   = result.mimeType;
+
+        // Ganti ekstensi file dengan .webp jika berhasil dikompres
+        if (result.wasCompressed) {
+            uploadPath = fileName.replace(/\.[^.]+$/, '') + '.webp';
+        }
+    }
+
     const { data, error } = await supabase.storage
         .from(bucket)
-        .upload(fileName, buffer, {
-            contentType: mimeType,
-            upsert: true
+        .upload(uploadPath, uploadBuffer, {
+            contentType: uploadMime,
+            upsert: true,
         });
 
     if (error) {

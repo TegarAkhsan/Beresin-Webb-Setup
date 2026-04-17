@@ -13,7 +13,7 @@ import {
     earnings
 } from '../controllers/adminController.js';
 import { requireAuth, isAdmin } from '../middleware/inertiaMiddleware.js';
-import { upload } from '../middleware/upload.js';
+import { upload, handleMulterError } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -64,7 +64,10 @@ router.delete('/admin/addons/:id', requireAuth, isAdmin, deleteAddon);
 // ─── Settings ─────────────────────────────────────────────────────────────────
 router.get('/admin/settings', requireAuth, isAdmin, settings);
 router.post('/admin/settings', requireAuth, isAdmin,
-    upload.fields([{ name: 'invoice_logo', maxCount: 1 }, { name: 'qris_image', maxCount: 1 }]),
+    (req, res, next) => upload.fields([
+        { name: 'invoice_logo', maxCount: 1 },
+        { name: 'qris_image',   maxCount: 1 }
+    ])(req, res, (err) => handleMulterError(err, req, res, next)),
     updateSettings
 );
 

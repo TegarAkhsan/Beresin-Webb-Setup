@@ -53,7 +53,7 @@ export default function CompletedTab({ completedTasks }) {
                                     <div className="text-right mb-2">
                                         <p className="text-xs text-gray-400 font-bold uppercase mb-1">Earning</p>
                                         <span className="text-xl font-bold text-emerald-600">
-                                            Rp {new Intl.NumberFormat('id-ID').format(task.amount)}
+                                            Rp {new Intl.NumberFormat('id-ID').format(task.joki_commission)}
                                         </span>
                                     </div>
                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">

@@ -110,12 +110,14 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
     // File Upload Form
     const { data, setData, post, processing, reset, errors } = useForm({
         file: null,
+        proof_images: [],
         version_label: '',
         external_link: '',
         note: '',
         milestone_id: ''
     });
 
+    const [proofImagePreviews, setProofImagePreviews] = useState([]);
     const [uploadType, setUploadType] = useState('regular'); // regular, milestone
 
     const openUploadModal = (order) => {
@@ -146,43 +148,51 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
 
         setData({
             file: null,
+            proof_images: [],
             version_label: '',
             external_link: '',
             note: '',
             milestone_id: defaultMilestoneId
         });
+        setProofImagePreviews([]);
         setShowUploadModal(true);
     };
 
     const closeUploadModal = () => {
         setShowUploadModal(false);
+        setProofImagePreviews([]);
         reset();
     };
 
     const submitUpload = (e) => {
         e.preventDefault();
 
+        // Inertia useForm tidak support multiple files, gunakan router.post dengan FormData
+        const formData = new FormData();
+        if (data.file)         formData.append('file', data.file);
+        if (data.external_link) formData.append('external_link', data.external_link);
+        if (data.version_label) formData.append('version_label', data.version_label);
+        if (data.note)         formData.append('note', data.note);
+        if (data.milestone_id) formData.append('milestone_id', String(data.milestone_id));
+
+        // Append all proof images
+        (data.proof_images || []).forEach((img) => {
+            formData.append('proof_images', img);
+        });
+
+        const opts = {
+            forceFormData: true,
+            onSuccess: () => {
+                closeUploadModal();
+            }
+        };
+
         if (uploadType === 'final') {
-            post(route('joki.finalize-order', selectedOrder.id), {
-                onSuccess: () => {
-                    reset();
-                    closeUploadModal();
-                }
-            });
+            router.post(route('joki.finalize-order', selectedOrder.id), formData, opts);
         } else if (uploadType === 'milestone') {
-            post(route('joki.orders.milestone', selectedOrder.id), {
-                onSuccess: () => {
-                    reset();
-                    closeUploadModal();
-                }
-            });
+            router.post(route('joki.orders.milestone', selectedOrder.id), formData, opts);
         } else {
-            post(route('joki.orders.upload', selectedOrder.id), {
-                onSuccess: () => {
-                    reset();
-                    closeUploadModal();
-                }
-            });
+            router.post(route('joki.orders.upload', selectedOrder.id), formData, opts);
         }
     };
 
@@ -623,79 +633,149 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                             />
                         </div>
 
-                        {/* File Form with NOTE */}
-
+                        {/* ── Upload File Pengerjaan (tunggal) ─────────── */}
                         <div className="pt-2">
-                            <label className="block text-sm font-bold text-gray-700 mb-4">
-                                Upload Proof / Deliverable
+                            <label className="block text-sm font-bold text-gray-700 mb-1">
+                                📁 Upload File Pengerjaan
                             </label>
-                            <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors mb-4 cursor-pointer group">
+                            <p className="text-xs text-gray-500 mb-3">
+                                File hasil kerja utama (PDF, ZIP, DOCX, PSD, dll). Maks 10MB.
+                            </p>
+                            <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors mb-2 cursor-pointer group">
                                 <input
                                     type="file"
+                                    name="file"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    onChange={(e) => setData('file', e.target.files[0])}
+                                    onChange={(e) => setData('file', e.target.files[0] || null)}
                                 />
                                 <div className="text-gray-400 group-hover:text-indigo-500">
-                                    <p className="text-sm font-medium">{data.file ? data.file.name : "Click or Drag file here (Max 10MB)"}</p>
-                                </div>
-                            </div>
-                            {errors.file && <div className="text-red-500 text-sm mb-4">{errors.file}</div>}
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <InputLabel value="Version Label" className="mb-2" />
-                                    <TextInput
-                                        type="text"
-                                        name="version_label"
-                                        autoComplete="off"
-                                        className="w-full"
-                                        placeholder="e.g. V1"
-                                        value={data.version_label}
-                                        onChange={(e) => setData('version_label', e.target.value)}
-                                    />
-                                    {errors.version_label && <div className="text-red-500 text-sm mt-1">{errors.version_label}</div>}
-
-                                    {/* Version History Helper */}
-                                    {selectedOrder?.files && selectedOrder.files.length > 0 && (
-                                        <div className="mt-2 text-xs text-gray-500">
-                                            <p className="font-bold mb-1">Previous Versions:</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {selectedOrder.files.map((file) => (
-                                                    <span key={file.id} className="inline-block px-2 py-1 bg-gray-100 rounded text-gray-600 border border-gray-200">
-                                                        {file.version_label}
-                                                    </span>
-                                                ))}
-                                            </div>
+                                    {data.file ? (
+                                        <div className="flex items-center justify-center gap-2">
+                                            <span className="text-2xl">📄</span>
+                                            <span className="text-sm font-medium text-indigo-700 break-all">{data.file.name}</span>
                                         </div>
+                                    ) : (
+                                        <p className="text-sm font-medium">Click atau drag file di sini (Max 10MB)</p>
                                     )}
                                 </div>
                             </div>
+                            {errors.file && <div className="text-red-500 text-sm mb-2">{errors.file}</div>}
+                        </div>
 
-                            {/* Naming Convention Guide */}
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6 text-xs text-yellow-800">
-                                <p className="font-bold mb-1">Naming Guide:</p>
-                                <ul className="list-disc list-inside space-y-0.5">
-                                    <li>First submission: <strong>V1</strong></li>
-                                    <li>Revisions: <strong>Rev V1</strong>, <strong>Rev V2</strong>, etc.</li>
-                                    <li>Final (approved/done): <strong>Final</strong></li>
-                                </ul>
+                        {/* ── Upload Gambar / Screenshot (multiple) ──────── */}
+                        <div className="pt-4">
+                            <label className="block text-sm font-bold text-gray-700 mb-1">
+                                🖼️ Upload Gambar / Screenshot Bukti
+                            </label>
+                            <p className="text-xs text-gray-500 mb-3">
+                                Screenshot, foto hasil, atau bukti pengerjaan dalam bentuk gambar. Bisa upload banyak sekaligus, otomatis dikompres.
+                            </p>
+                            <div className="relative border-2 border-dashed border-blue-300 bg-blue-50/40 rounded-xl p-6 text-center hover:bg-blue-50 transition-colors mb-3 cursor-pointer group">
+                                <input
+                                    type="file"
+                                    name="proof_images"
+                                    multiple
+                                    accept="image/*"
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    onChange={(e) => {
+                                        const files = Array.from(e.target.files);
+                                        setData('proof_images', [...(data.proof_images || []), ...files]);
+                                        const newPreviews = files.map(f => URL.createObjectURL(f));
+                                        setProofImagePreviews(prev => [...prev, ...newPreviews]);
+                                        // reset input so same files can be added again
+                                        e.target.value = '';
+                                    }}
+                                />
+                                <div className="text-blue-400 group-hover:text-blue-600 pointer-events-none">
+                                    <span className="text-2xl block mb-1">🖼️</span>
+                                    <p className="text-sm font-medium">Click atau drag gambar/screenshot di sini</p>
+                                    <p className="text-xs mt-1 text-blue-400">Boleh pilih banyak sekaligus • JPEG, PNG, WebP</p>
+                                </div>
                             </div>
 
-                            <div className="mb-6">
-                                <InputLabel value="Note / Catatan (Optional)" className="mb-2" />
-                                <textarea
-                                    className="block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm"
-                                    rows="3"
-                                    placeholder="Add notes about this version..."
-                                    value={data.note}
-                                    onChange={(e) => setData('note', e.target.value)}
-                                ></textarea>
+                            {/* Preview thumbnail grid */}
+                            {proofImagePreviews.length > 0 && (
+                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                    {proofImagePreviews.map((src, i) => (
+                                        <div key={i} className="relative group/thumb rounded-lg overflow-hidden border border-blue-200 aspect-square">
+                                            <img src={src} alt={`preview-${i}`} className="w-full h-full object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setProofImagePreviews(prev => prev.filter((_, idx) => idx !== i));
+                                                    setData('proof_images', (data.proof_images || []).filter((_, idx) => idx !== i));
+                                                }}
+                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity leading-none"
+                                            >✕</button>
+                                            <div className="absolute bottom-0 inset-x-0 bg-black/40 text-white text-[10px] text-center py-0.5 opacity-0 group-hover/thumb:opacity-100 transition-opacity">
+                                                Hapus
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {(data.proof_images || []).length > 0 && (
+                                <p className="text-xs text-blue-600 font-medium mb-2">
+                                    {data.proof_images.length} gambar dipilih
+                                </p>
+                            )}
+                        </div>
+
+                        {/* ── Version Label & Note ─────────────────────── */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 mb-4">
+                            <div>
+                                <InputLabel value="Version Label" className="mb-2" />
+                                <TextInput
+                                    type="text"
+                                    name="version_label"
+                                    autoComplete="off"
+                                    className="w-full"
+                                    placeholder="e.g. V1"
+                                    value={data.version_label}
+                                    onChange={(e) => setData('version_label', e.target.value)}
+                                />
+                                {errors.version_label && <div className="text-red-500 text-sm mt-1">{errors.version_label}</div>}
+
+                                {/* Version History Helper */}
+                                {selectedOrder?.files && selectedOrder.files.length > 0 && (
+                                    <div className="mt-2 text-xs text-gray-500">
+                                        <p className="font-bold mb-1">Previous Versions:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedOrder.files.map((file) => (
+                                                <span key={file.id} className="inline-block px-2 py-1 bg-gray-100 rounded text-gray-600 border border-gray-200">
+                                                    {file.version_label}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+                        </div>
+
+                        {/* Naming Convention Guide */}
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6 text-xs text-yellow-800">
+                            <p className="font-bold mb-1">Naming Guide:</p>
+                            <ul className="list-disc list-inside space-y-0.5">
+                                <li>First submission: <strong>V1</strong></li>
+                                <li>Revisions: <strong>Rev V1</strong>, <strong>Rev V2</strong>, etc.</li>
+                                <li>Final (approved/done): <strong>Final</strong></li>
+                            </ul>
+                        </div>
+
+                        <div className="mb-6">
+                            <InputLabel value="Note / Catatan (Optional)" className="mb-2" />
+                            <textarea
+                                className="block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm"
+                                rows="3"
+                                placeholder="Add notes about this version..."
+                                value={data.note}
+                                onChange={(e) => setData('note', e.target.value)}
+                            ></textarea>
                         </div>
 
                         <div className="flex justify-end gap-3 space-x-3">
                             <SecondaryButton onClick={closeUploadModal}>Cancel</SecondaryButton>
-                            <PrimaryButton disabled={processing} className={selectedOrder?.status === 'revision' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-indigo-600'}>
+                            <PrimaryButton className={selectedOrder?.status === 'revision' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-indigo-600'}>
                                 {uploadType === 'milestone'
                                     ? (selectedOrder?.status === 'revision' ? 'Submit Revision' : 'Submit Milestone')
                                     : 'Submit Deliverables'}

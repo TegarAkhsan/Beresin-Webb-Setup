@@ -138,11 +138,23 @@ export const uploadMilestone = async (req, res) => {
         const milestone = await prisma.order_milestones.findUnique({ where: { id: parseInt(milestone_id) } });
         if (!milestone) return flashRedirect(res, '/joki/dashboard', 'Milestone tidak ditemukan', true);
 
+        // Upload file pengerjaan utama (single)
         let milestoneFileUrl = null;
-        if (req.file) {
-            const ext = req.file.originalname.split('.').pop();
+        const mainFile = req.files?.file?.[0];
+        if (mainFile) {
+            const ext = mainFile.originalname.split('.').pop();
             const fileName = `milestones/order-${id}-milestone-${milestone_id}-${Date.now()}.${ext}`;
-            milestoneFileUrl = await uploadToStorage(req.file.buffer, 'beresin-uploads', fileName, req.file.mimetype);
+            milestoneFileUrl = await uploadToStorage(mainFile.buffer, 'beresin-uploads', fileName, mainFile.mimetype);
+        }
+
+        // Upload multiple proof images (screenshots)
+        let proofImageUrls = [];
+        const proofFiles = req.files?.proof_images || [];
+        for (const img of proofFiles) {
+            const ext = img.originalname.split('.').pop();
+            const fileName = `milestones/proof-${id}-milestone-${milestone_id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+            const url = await uploadToStorage(img.buffer, 'beresin-uploads', fileName, img.mimetype);
+            proofImageUrls.push(url);
         }
 
         const finalLink = external_link || milestoneFileUrl || null;
@@ -159,12 +171,14 @@ export const uploadMilestone = async (req, res) => {
         });
 
         // Simpan versi upload milestone ke `order_files` agar customer bisa lihat riwayat
-        if (finalLink) {
+        if (finalLink || proofImageUrls.length > 0) {
             await prisma.order_files.create({
                 data: {
                     order_id: parseInt(id),
-                    file_path: finalLink,
+                    file_path: milestoneFileUrl || null,
                     version_label: version_label ? `${milestone.name} - ${version_label}` : `${milestone.name} - v1`,
+                    note: note || null,
+                    proof_images: proofImageUrls.length > 0 ? JSON.stringify(proofImageUrls) : null,
                     created_at: new Date(),
                     updated_at: new Date()
                 }
@@ -200,6 +214,7 @@ export const uploadMilestone = async (req, res) => {
         return flashRedirect(res, '/joki/dashboard', 'Gagal mengirim milestone', true);
     }
 };
+
 
 export const finalizeOrder = async (req, res) => {
     const { id } = req.params;
@@ -282,21 +297,34 @@ export const uploadResult = async (req, res) => {
         });
         if (!order) return flashRedirect(res, '/joki/dashboard', 'Order tidak ditemukan', true);
 
+        // Upload file pengerjaan utama (single)
         let resultFileUrl = null;
-        if (req.file) {
-            const ext = req.file.originalname.split('.').pop();
+        const mainFile = req.files?.file?.[0];
+        if (mainFile) {
+            const ext = mainFile.originalname.split('.').pop();
             const fileName = `results/order-${id}-${Date.now()}.${ext}`;
-            resultFileUrl = await uploadToStorage(req.file.buffer, 'beresin-uploads', fileName, req.file.mimetype);
+            resultFileUrl = await uploadToStorage(mainFile.buffer, 'beresin-uploads', fileName, mainFile.mimetype);
+        }
+
+        // Upload multiple proof images (screenshots)
+        let proofImageUrls = [];
+        const proofFiles = req.files?.proof_images || [];
+        for (const img of proofFiles) {
+            const ext = img.originalname.split('.').pop();
+            const fileName = `results/proof-${id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+            const url = await uploadToStorage(img.buffer, 'beresin-uploads', fileName, img.mimetype);
+            proofImageUrls.push(url);
         }
 
         // Simpan versi upload ke `order_files` agar customer bisa lihat riwayat revisi
-        if (resultFileUrl || external_link) {
+        if (resultFileUrl || external_link || proofImageUrls.length > 0) {
             await prisma.order_files.create({
                 data: {
                     order_id: parseInt(id),
-                    file_path: resultFileUrl || external_link,
+                    file_path: resultFileUrl || (external_link || null),
                     version_label: version_label || 'v1',
                     note: note || null,
+                    proof_images: proofImageUrls.length > 0 ? JSON.stringify(proofImageUrls) : null,
                     created_at: new Date(),
                     updated_at: new Date()
                 }

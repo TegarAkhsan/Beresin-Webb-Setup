@@ -10,7 +10,7 @@ import {
     updateBankDetails
 } from '../controllers/jokiDashboardController.js';
 import { requireAuth, isJoki } from '../middleware/inertiaMiddleware.js';
-import { upload } from '../middleware/upload.js';
+import { upload, handleMulterError } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -20,15 +20,21 @@ router.get('/joki/dashboard', requireAuth, isJoki, index);
 // Task Actions
 router.post('/joki/orders/:id/start', requireAuth, isJoki, startTask);
 
-// Upload result file (joki.orders.upload) — was MISSING → caused 404 in screenshot
+// Upload result file (joki.orders.upload)
+// Gambar otomatis dikompres ke WebP sebelum upload ke Supabase
+const uploadFields = upload.fields([
+    { name: 'file',         maxCount: 1 },
+    { name: 'proof_images', maxCount: 20 }, // tidak dibatasi ketat, max 20 per request
+]);
+
 router.post('/joki/orders/:id/upload', requireAuth, isJoki,
-    upload.single('file'),
+    (req, res, next) => uploadFields(req, res, (err) => handleMulterError(err, req, res, next)),
     uploadResult
 );
 
 // Upload milestone progress (joki.orders.milestone)
 router.post('/joki/orders/:id/milestone', requireAuth, isJoki,
-    upload.single('file'),
+    (req, res, next) => uploadFields(req, res, (err) => handleMulterError(err, req, res, next)),
     uploadMilestone
 );
 
