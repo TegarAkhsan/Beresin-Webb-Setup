@@ -258,12 +258,8 @@ export default function Create({ auth, packages, selectedPackageId, whatsapp_num
         setBudgetDisplay(numeric > 0 ? new Intl.NumberFormat('id-ID').format(numeric) : '');
     };
 
-    // Helper: cek apakah perlu tampilkan chat trigger
-    // Chat muncul jika: tidak ada fitur dipilih TAPI ada deskripsi custom di-isi
-    const shouldShowChatTrigger = (
-        data.selected_features.length === 0 &&
-        data.custom_description.trim().length > 10
-    );
+    // Chat trigger selalu tampil untuk paket pelajar
+    const shouldShowChatTrigger = true;
 
     const waLink = whatsapp_number
         ? `https://wa.me/${whatsapp_number.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Halo, saya ingin konsultasi pembuatan website custom. ' + data.custom_description)}`
@@ -538,14 +534,14 @@ export default function Create({ auth, packages, selectedPackageId, whatsapp_num
                                                     />
                                                     <InputError message={errors.custom_description} className="mt-1" />
 
-                                                    {/* Chat Trigger: muncul jika custom desc diisi tapi tidak ada fitur dipilih */}
+                                                    {/* Chat Trigger: Langsung dimunculkan untuk Paket Pelajar */}
                                                     {shouldShowChatTrigger && (
                                                         <div className="mt-3 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-400 rounded-xl shadow-[3px_3px_0px_0px_rgba(16,185,129,0.4)] animate-pulse-once">
                                                             <div className="flex items-start gap-3">
                                                                 <div className="text-2xl flex-shrink-0">💬</div>
                                                                 <div className="flex-1">
                                                                     <h5 className="font-black text-emerald-800 text-sm mb-1">Mau Konsultasi Dulu?</h5>
-                                                                    <p className="text-xs text-emerald-700 mb-3">Kamu belum memilih fitur dari list — tim kami siap membantu menentukan fitur yang tepat sesuai kebutuhanmu melalui chat langsung!</p>
+                                                                    <p className="text-xs text-emerald-700 mb-3">Masih bingung menentukan spesifikasi? Tim kami siap berdiskusi dan membantu menentukan fitur yang tepat sesuai kebutuhanmu melalui chat langsung!</p>
                                                                     <a
                                                                         href={waLink}
                                                                         target="_blank"

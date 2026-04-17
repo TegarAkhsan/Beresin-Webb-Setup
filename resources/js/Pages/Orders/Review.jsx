@@ -25,7 +25,7 @@ export default function Review({ auth, order }) {
     });
 
     const { data: revisionData, setData: setRevisionData, post: postRevision, processing: revisionProcessing, errors: revisionErrors, reset: resetRevision, transform: transformRevision } = useForm({
-        reason: '',
+        revision_reason: '',
         revision_file: null
     });
 
@@ -568,7 +568,7 @@ export default function Review({ auth, order }) {
                                 className="w-full rounded-xl border-slate-300 shadow-sm focus:border-slate-900 focus:ring-slate-900 h-32"
                                 placeholder="Jelaskan bagian mana yang perlu diperbaiki..."
                                 required
-                                onChange={(e) => setRevisionData('reason', e.target.value)}
+                                onChange={(e) => setRevisionData('revision_reason', e.target.value)}
                             ></textarea>
                         </div>
 

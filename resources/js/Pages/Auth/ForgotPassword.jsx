@@ -2,9 +2,10 @@ import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 
 export default function ForgotPassword({ status }) {
+    const { flash } = usePage().props;
     const { data, setData, post, processing, errors } = useForm({
         email: '',
     });
@@ -25,9 +26,14 @@ export default function ForgotPassword({ status }) {
                 allow you to choose a new one.
             </div>
 
-            {status && (
-                <div className="mb-4 text-sm font-medium text-green-600">
-                    {status}
+            {(status || flash?.message || flash?.success) && (
+                <div className="mb-4 text-sm font-medium text-green-600 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    {status || flash?.message || flash?.success}
+                </div>
+            )}
+            {flash?.error && (
+                <div className="mb-4 text-sm font-medium text-red-600 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    {flash.error}
                 </div>
             )}
 

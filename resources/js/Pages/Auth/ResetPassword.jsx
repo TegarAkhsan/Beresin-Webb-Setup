@@ -3,9 +3,10 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 
 export default function ResetPassword({ token, email }) {
+    const { flash } = usePage().props;
     const { data, setData, post, processing, errors, reset } = useForm({
         token: token,
         email: email,
@@ -24,6 +25,12 @@ export default function ResetPassword({ token, email }) {
     return (
         <GuestLayout>
             <Head title="Reset Password" />
+
+            {flash?.error && (
+                <div className="mb-4 text-sm font-medium text-red-600 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    {flash.error}
+                </div>
+            )}
 
             <form onSubmit={submit}>
                 <div>

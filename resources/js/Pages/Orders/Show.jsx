@@ -479,8 +479,8 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                         </div>
                                     )}
 
-                                    {/* Result Section — disembunyikan saat status review agar user langsung ke halaman Review */}
-                                    {order.result_file && order.status !== 'review' && (
+                                    {/* Result Section — disembunyikan saat status review atau revision */}
+                                    {order.result_file && !['review', 'revision'].includes(order.status) && (
                                         <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-200">
                                             <div className="text-center mb-6">
                                                 <h3 className="font-bold text-indigo-900 mb-2 text-lg">Result Available!</h3>
@@ -569,14 +569,11 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                                 </div>
                                             )}
 
-                                            {order.status === 'revision' && (
-                                                <div className="bg-orange-100 p-4 rounded-lg mt-4 text-center border border-orange-200">
-                                                    <p className="text-orange-800 font-bold">Revision Requested</p>
-                                                    <p className="text-sm text-orange-700">Waiting for Joki to upload revision.</p>
-                                                </div>
-                                            )}
-
-
+                                    {/* Pesan Revisi dipisah dari container Result Available */}
+                                    {order.status === 'revision' && (
+                                        <div className="bg-orange-100 p-4 rounded-lg mt-4 text-center border border-orange-200">
+                                            <p className="text-orange-800 font-bold">Revision Requested</p>
+                                            <p className="text-sm text-orange-700">Waiting for Joki to upload revision.</p>
                                         </div>
                                     )}
                                 </div>
