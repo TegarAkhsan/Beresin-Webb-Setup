@@ -171,6 +171,7 @@ model orders {
   proposed_price              Decimal?
   negotiation_deadline        DateTime?
   selected_features           String?
+  custom_description          String?
   base_price                  Decimal                   @default(0)
   rush_fee                    Decimal                   @default(0)
   platform_fee                Decimal                   @default(0)

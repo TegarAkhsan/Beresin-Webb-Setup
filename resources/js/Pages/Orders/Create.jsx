@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import Modal from '@/Components/Modal';
 
 
-export default function Create({ auth, packages, selectedPackageId }) {
+export default function Create({ auth, packages, selectedPackageId, whatsapp_number }) {
     const user = auth.user;
     const [showSizeError, setShowSizeError] = useState(false);
 
@@ -35,10 +35,15 @@ export default function Create({ auth, packages, selectedPackageId }) {
         student_card: null,
         proposed_price: 0,
         selected_features: [],
+        custom_description: '',
 
         // Payment Method (Visual only for now, passed to backend if needed)
         payment_method: 'qris',
     });
+
+    // Budget display state — formatted string yang ditampilkan ke user
+    // Actual numeric value tetap di data.proposed_price
+    const [budgetDisplay, setBudgetDisplay] = useState('');
 
     const [selectedPackage, setSelectedPackage] = useState(
         packages.find(p => p.id == selectedPackageId) || null
@@ -241,6 +246,28 @@ export default function Create({ auth, packages, selectedPackageId }) {
             setData('selected_features', [...current, featureName]);
         }
     };
+
+    // Format angka ke tampilan Rupiah saat user ketik di Proposed Budget
+    const handleBudgetInput = (e) => {
+        // Strip semua non-digit
+        const raw = e.target.value.replace(/[^0-9]/g, '');
+        const numeric = parseInt(raw || '0', 10);
+        // Simpan numeric ke form data (untuk backend)
+        setData('proposed_price', numeric);
+        // Format untuk display: 100000 -> "100.000"
+        setBudgetDisplay(numeric > 0 ? new Intl.NumberFormat('id-ID').format(numeric) : '');
+    };
+
+    // Helper: cek apakah perlu tampilkan chat trigger
+    // Chat muncul jika: tidak ada fitur dipilih TAPI ada deskripsi custom di-isi
+    const shouldShowChatTrigger = (
+        data.selected_features.length === 0 &&
+        data.custom_description.trim().length > 10
+    );
+
+    const waLink = whatsapp_number
+        ? `https://wa.me/${whatsapp_number.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Halo, saya ingin konsultasi pembuatan website custom. ' + data.custom_description)}`
+        : '#';
 
     return (
         <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Checkout Order</h2>}>
@@ -492,6 +519,49 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                                     </div>
                                                 )}
 
+                                                {/* Custom Description Field + Chat Trigger */}
+                                                <div className="mt-5 mb-2">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="text-base">✏️</span>
+                                                        <div>
+                                                            <label htmlFor="custom_description" className="block text-sm font-black text-slate-900">Ceritakan Website yang Kamu Inginkan</label>
+                                                            <p className="text-xs text-gray-500">Deskripsikan kebutuhan custom-mu — jika tidak ada fitur di atas yang sesuai, isi di sini dan tim kami akan menghubungimu.</p>
+                                                        </div>
+                                                    </div>
+                                                    <textarea
+                                                        id="custom_description"
+                                                        value={data.custom_description}
+                                                        onChange={e => setData('custom_description', e.target.value)}
+                                                        rows={4}
+                                                        placeholder="Contoh: Saya perlu website toko online dengan fitur keranjang belanja, integrasi pembayaran midtrans, dan panel admin..."
+                                                        className="w-full border-2 border-slate-200 focus:border-indigo-500 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-gray-400 transition-all focus:ring-2 focus:ring-indigo-200 resize-none"
+                                                    />
+                                                    <InputError message={errors.custom_description} className="mt-1" />
+
+                                                    {/* Chat Trigger: muncul jika custom desc diisi tapi tidak ada fitur dipilih */}
+                                                    {shouldShowChatTrigger && (
+                                                        <div className="mt-3 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-400 rounded-xl shadow-[3px_3px_0px_0px_rgba(16,185,129,0.4)] animate-pulse-once">
+                                                            <div className="flex items-start gap-3">
+                                                                <div className="text-2xl flex-shrink-0">💬</div>
+                                                                <div className="flex-1">
+                                                                    <h5 className="font-black text-emerald-800 text-sm mb-1">Mau Konsultasi Dulu?</h5>
+                                                                    <p className="text-xs text-emerald-700 mb-3">Kamu belum memilih fitur dari list — tim kami siap membantu menentukan fitur yang tepat sesuai kebutuhanmu melalui chat langsung!</p>
+                                                                    <a
+                                                                        href={waLink}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs px-4 py-2 rounded-full border-2 border-emerald-700 shadow-[2px_2px_0px_0px_rgba(6,78,59,1)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                                                                    >
+                                                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
+                                                                        Chat via WhatsApp
+                                                                    </a>
+                                                                    <p className="text-xs text-emerald-600 mt-2 font-medium">📝 Kamu tetap bisa submit proposal langsung di bawah — admin akan menghubungimu.</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
                                                 {/* Proposed Budget */}
                                                 <div className="mt-4 p-4 bg-yellow-50 rounded-xl border-2 border-yellow-300">
                                                     <div className="flex items-center gap-2 mb-3">
@@ -505,12 +575,12 @@ export default function Create({ auth, packages, selectedPackageId }) {
                                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">Rp</span>
                                                         <input
                                                             id="proposed_price"
-                                                            type="number"
-                                                            value={data.proposed_price}
-                                                            onChange={e => setData('proposed_price', e.target.value)}
+                                                            type="text"
+                                                            inputMode="numeric"
+                                                            value={budgetDisplay}
+                                                            onChange={handleBudgetInput}
                                                             className="w-full pl-10 pr-4 py-3 text-xl font-black text-slate-900 border-2 border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 bg-white transition-all"
-                                                            placeholder="contoh: 150000"
-                                                            min="50000"
+                                                            placeholder="contoh: 150.000"
                                                         />
                                                     </div>
                                                     {refPrice > 0 && (

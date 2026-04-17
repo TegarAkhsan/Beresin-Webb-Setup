@@ -45,7 +45,7 @@ export default function Show({ auth, order, whatsapp_number, qris_image }) {
         // Untuk order negosiasi: selalu mulai dari 'va' agar customer bisa pilih bebas
         order.is_negotiation ? 'va' : (order.payment_method || 'va')
     );
-    const [selectedBank, setSelectedBank] = useState('bca');
+    const [selectedBank, setSelectedBank] = useState('BCA');
     const [showAcceptModal, setShowAcceptModal] = useState(false);
     const [showRevisionModal, setShowRevisionModal] = useState(false);
     const [showPaymentWarningModal, setShowPaymentWarningModal] = useState(false);

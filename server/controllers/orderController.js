@@ -70,9 +70,15 @@ export const create = async (req, res) => {
             })),
         }));
 
+        const settingsRaw = await prisma.settings.findMany({
+            where: { key: 'whatsapp_number' }
+        });
+        const waNumber = settingsRaw[0]?.value || null;
+
         res.inertia('Orders/Create', {
             packages: formattedPackages,
-            selectedPackageId: req.query.package_id || null
+            selectedPackageId: req.query.package_id || null,
+            whatsapp_number: waNumber
         });
     } catch (error) {
         console.error('[Order Create Error]', error.message, error.stack);
@@ -85,7 +91,8 @@ export const store = async (req, res) => {
     const {
         package_id, payment_method, name, gender, email,
         phone, address, university, referral_source, description,
-        deadline, notes, external_link, proposed_price, selected_features
+        deadline, notes, external_link, proposed_price, selected_features,
+        custom_description
     } = req.body;
 
     try {
@@ -187,8 +194,9 @@ export const store = async (req, res) => {
                 payment_method: payment_method || 'qris',
                 status,
                 is_negotiation,
-                proposed_price: is_negotiation ? parseFloat(proposed_price) : null,
+                proposed_price: is_negotiation ? parseFloat(proposed_price) || 0 : null,
                 selected_features: is_negotiation ? JSON.stringify(selected_features || []) : null,
+                custom_description: is_negotiation ? (custom_description || null) : null,
                 negotiation_deadline: is_negotiation ? new Date(deadline) : null,
                 created_at: now,
                 updated_at: now,
