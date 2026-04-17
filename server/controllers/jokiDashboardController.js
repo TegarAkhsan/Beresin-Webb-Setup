@@ -319,7 +319,6 @@ export const uploadResult = async (req, res) => {
             data: {
                 result_file: resultFileUrl || order.result_file,
                 external_link: external_link || order.external_link,
-                result_note: note || null,
                 status: 'review',
                 updated_at: new Date()
             }
