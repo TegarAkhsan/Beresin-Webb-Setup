@@ -446,6 +446,19 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                                     )
                                                 }
                                             </p>
+
+                                            {/* Tombol Review Sekarang — hanya muncul saat status review */}
+                                            {order.status === 'review' && (
+                                                <div className="mt-5">
+                                                    <Link
+                                                        href={route('orders.review', order.id)}
+                                                        className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white font-black rounded-xl border-2 border-purple-900 shadow-[4px_4px_0px_0px_rgba(88,28,135,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-sm"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                        Review Sekarang
+                                                    </Link>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : order.status === 'completed' ? (
                                         <div className="bg-emerald-50 p-6 rounded-2xl border-2 border-emerald-600 shadow-[4px_4px_0px_0px_rgba(5,150,105,1)] text-center">
@@ -466,8 +479,8 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                         </div>
                                     )}
 
-                                    {/* Result Section */}
-                                    {order.result_file && (
+                                    {/* Result Section — disembunyikan saat status review agar user langsung ke halaman Review */}
+                                    {order.result_file && order.status !== 'review' && (
                                         <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-200">
                                             <div className="text-center mb-6">
                                                 <h3 className="font-bold text-indigo-900 mb-2 text-lg">Result Available!</h3>
