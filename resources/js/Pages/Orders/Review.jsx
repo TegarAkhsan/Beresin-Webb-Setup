@@ -245,8 +245,7 @@ export default function Review({ auth, order }) {
                                     <p className="text-slate-900">{displayNote || "No notes provided."}</p>
                                 </div>
                             </div>
-
-
+                        </div>
                         {/* RIGHT: ACTION CARD */}
                         <div className="space-y-6">
                             {(order.status === 'review' || pendingMilestone) ? (
