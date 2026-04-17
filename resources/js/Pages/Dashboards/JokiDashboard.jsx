@@ -722,34 +722,73 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                         </div>
 
                         {/* ── Version Label & Note ─────────────────────── */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 mb-4">
-                            <div>
-                                <InputLabel value="Version Label" className="mb-2" />
-                                <TextInput
-                                    type="text"
-                                    name="version_label"
-                                    autoComplete="off"
-                                    className="w-full"
-                                    placeholder="e.g. V1"
-                                    value={data.version_label}
-                                    onChange={(e) => setData('version_label', e.target.value)}
-                                />
-                                {errors.version_label && <div className="text-red-500 text-sm mt-1">{errors.version_label}</div>}
+                        <div className="pt-4 mb-4">
+                            <InputLabel value="Version Label" className="mb-2" />
+                            <TextInput
+                                type="text"
+                                name="version_label"
+                                autoComplete="off"
+                                className="w-full"
+                                placeholder="e.g. V1, Rev V1, Final..."
+                                value={data.version_label}
+                                onChange={(e) => setData('version_label', e.target.value)}
+                            />
+                            {errors.version_label && <div className="text-red-500 text-sm mt-1">{errors.version_label}</div>}
 
-                                {/* Version History Helper */}
-                                {selectedOrder?.files && selectedOrder.files.length > 0 && (
-                                    <div className="mt-2 text-xs text-gray-500">
-                                        <p className="font-bold mb-1">Previous Versions:</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {selectedOrder.files.map((file) => (
-                                                <span key={file.id} className="inline-block px-2 py-1 bg-gray-100 rounded text-gray-600 border border-gray-200">
-                                                    {file.version_label}
-                                                </span>
-                                            ))}
-                                        </div>
+                            {/* Version History - tampil jika ada riwayat */}
+                            {selectedOrder?.files && selectedOrder.files.length > 0 ? (
+                                <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <p className="text-xs font-black uppercase tracking-wide text-gray-500 mb-2">
+                                        📋 Label yang sudah dipakai:
+                                    </p>
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                        {selectedOrder.files.map((file, idx) => {
+                                            const isLast = idx === selectedOrder.files.length - 1;
+                                            return (
+                                                <div key={file.id} className="flex flex-col items-center gap-0.5">
+                                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border
+                                                        ${isLast
+                                                            ? 'bg-indigo-100 text-indigo-700 border-indigo-300 ring-2 ring-indigo-200'
+                                                            : 'bg-gray-100 text-gray-600 border-gray-200'
+                                                        }`}>
+                                                        {file.version_label}
+                                                    </span>
+                                                    {isLast && (
+                                                        <span className="text-[10px] text-indigo-500 font-semibold">terakhir</span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-                                )}
-                            </div>
+                                    <p className="text-xs text-gray-400">
+                                        Sudah ada <strong>{selectedOrder.files.length}</strong> versi. Gunakan label baru seperti{' '}
+                                        <button
+                                            type="button"
+                                            className="text-indigo-600 font-bold underline hover:text-indigo-800"
+                                            onClick={() => {
+                                                const lastLabel = selectedOrder.files[selectedOrder.files.length - 1]?.version_label || '';
+                                                // Auto-suggest: V1→V2, Rev V1→Rev V2, dll
+                                                const match = lastLabel.match(/(\d+)$/);
+                                                const suggested = match
+                                                    ? lastLabel.replace(/(\d+)$/, String(parseInt(match[1]) + 1))
+                                                    : lastLabel + ' Rev';
+                                                setData('version_label', suggested);
+                                            }}
+                                        >
+                                            {(() => {
+                                                const lastLabel = selectedOrder.files[selectedOrder.files.length - 1]?.version_label || 'V1';
+                                                const match = lastLabel.match(/(\d+)$/);
+                                                return match
+                                                    ? lastLabel.replace(/(\d+)$/, String(parseInt(match[1]) + 1))
+                                                    : lastLabel + ' Rev';
+                                            })()}
+                                        </button>
+                                        {' '}(klik untuk isi otomatis)
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-xs text-gray-400 mt-2">Belum ada versi sebelumnya. Gunakan <strong>V1</strong> untuk pengiriman pertama.</p>
+                            )}
                         </div>
 
                         {/* Naming Convention Guide */}

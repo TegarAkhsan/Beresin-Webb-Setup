@@ -70,7 +70,13 @@ export default function DashboardTab({ user, stats, activeTasks, reviewTasks, op
                                 {!isRevision && (
                                     <p className="text-xs text-amber-600 mb-1">⚑ Sudah disubmit — pastikan revisi ini sudah ditangani.</p>
                                 )}
-                                <p className={`text-sm italic ${isRevision ? 'text-gray-800' : 'text-gray-600'}`}>"{task.revision_reason}"</p>
+                                {task.revision_reason ? (
+                                    <p className={`text-sm italic ${isRevision ? 'text-gray-800' : 'text-gray-600'}`}>"{task.revision_reason}"</p>
+                                ) : (
+                                    <p className={`text-sm ${isRevision ? 'text-gray-400' : 'text-gray-400'} italic`}>
+                                        — Tidak ada catatan spesifik dari customer —
+                                    </p>
+                                )}
                             </div>
 
                             {task.revision_file && (

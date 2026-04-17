@@ -41,6 +41,14 @@ const mapOrder = (o) => ({
         created_at: m.created_at instanceof Date ? m.created_at.toISOString() : m.created_at,
         completed_at: m.completed_at instanceof Date ? m.completed_at.toISOString() : null,
     })),
+    // Sertakan riwayat file upload (untuk version label history di modal joki)
+    files: (o.order_files || []).map(f => ({
+        id: f.id,
+        file_path: f.file_path || null,
+        version_label: f.version_label,
+        note: f.note || null,
+        created_at: f.created_at instanceof Date ? f.created_at.toISOString() : f.created_at,
+    })),
     joki_commission: calculateJokiCommission(o),
     review: (o.reviews || [])[0] || null,
 });
@@ -55,6 +63,7 @@ export const index = async (req, res) => {
                 packages: { include: { services: true } },
                 users_orders_user_idTousers: true,
                 order_milestones: { orderBy: { sort_order: 'asc' } },
+                order_files: { orderBy: { created_at: 'asc' } },
                 reviews: true
             },
             orderBy: { created_at: 'desc' }
