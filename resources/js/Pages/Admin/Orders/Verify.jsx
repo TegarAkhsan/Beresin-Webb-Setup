@@ -541,28 +541,28 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
 
                                                 return (
                                                     <div className="mt-2 pt-2 border-t border-dashed">
-                                                        <p className="text-xs text-gray-400">System Ref. Price (Normal + Rush):</p>
-                                                        <p className="text-sm font-bold text-gray-500">
+                                                        <p className="text-xs text-gray-400">Harga Sistem (referensi admin):</p>
+                                                        <p className="text-xs text-gray-400 italic mb-1">Harga normal fitur yang dipilih + biaya rush deadline</p>
+                                                        <p className="text-sm font-bold text-gray-600">
                                                             Rp {new Intl.NumberFormat('id-ID').format(totalSystemPrice)}
                                                             {rushFee > 0 && <span className="text-amber-500 text-xs ml-1">(+{new Intl.NumberFormat('id-ID').format(rushFee)} Rush)</span>}
+                                                        </p>
+                                                        <p className="text-xs text-indigo-600 mt-1">
+                                                            Budget customer: <strong>Rp {new Intl.NumberFormat('id-ID').format(viewingOrder.amount)}</strong>
+                                                            {' '}{viewingOrder.amount < totalSystemPrice
+                                                                ? <span className="text-red-500">(di bawah harga sistem)</span>
+                                                                : <span className="text-green-600">(✓ di atas harga sistem)</span>
+                                                            }
                                                         </p>
                                                     </div>
                                                 );
                                             })()}
                                         </div>
 
-                                        {viewingOrder.student_card && (
-                                            <div className="col-span-2 mt-2">
-                                                <p className="text-xs text-gray-500 mb-1">Student ID Card (KTM):</p>
-                                                <a href={`/storage/${viewingOrder.student_card}`} target="_blank" className="flex items-center gap-2 text-indigo-600 hover:underline bg-indigo-50 p-2 rounded w-fit">
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                                    View Student Card
-                                                </a>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             )}
+
 
                             {/* Files section moved above – this block is now redundant */}
                         </div>

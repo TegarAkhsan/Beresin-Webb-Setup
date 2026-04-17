@@ -175,7 +175,31 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                         {order.status === 'waiting_approval' ? 'Payment Status' : 'Payment Instructions'}
                                     </h3>
 
-                                    {/* Payment Method Tabs & Content (Strict Display) */}
+                                    {/* Banner khusus: Proposal Pelajar Diterima */}
+                                    {order.status === 'pending_payment' && order.is_negotiation && !order.payment_proof && (
+                                        <div className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-5 mb-6 shadow-[4px_4px_0px_0px_rgba(16,185,129,0.3)]">
+                                            <div className="flex items-start gap-4">
+                                                <div className="text-3xl flex-shrink-0">🎉</div>
+                                                <div>
+                                                    <h4 className="font-black text-lg text-emerald-800 mb-1">Proposal Anda Diterima!</h4>
+                                                    <p className="text-emerald-700 text-sm mb-3">
+                                                        Admin telah menyetujui proposal paket pelajar Anda. Silakan lakukan pembayaran untuk melanjutkan order.
+                                                    </p>
+                                                    <div className="bg-white border border-emerald-200 rounded-xl p-3 flex items-center justify-between gap-4">
+                                                        <div>
+                                                            <p className="text-xs text-gray-500 font-semibold uppercase">Total Pembayaran</p>
+                                                            <p className="text-2xl font-black text-emerald-700">Rp {new Intl.NumberFormat('id-ID').format(order.amount)}</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-xs text-gray-400">Paket</p>
+                                                            <p className="text-sm font-bold text-gray-700">{order.package?.name || 'Paket Pelajar'}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {order.status === 'pending_payment' && !order.payment_proof && (
                                         <>
                                             {/* Logic: If payment_method is set, force that view. Else show tabs (fallback) */}
