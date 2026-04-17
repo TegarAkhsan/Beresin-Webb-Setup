@@ -7,6 +7,13 @@ import InputLabel from '@/Components/InputLabel';
 import Modal from '@/Components/Modal';
 import { useState } from 'react';
 
+// Helper: returns full URL if already absolute, else prepends /storage/
+const getFileUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    return `/storage/${path}`;
+};
+
 export default function Review({ auth, order }) {
     const { data: ratingData, setData: setRatingData, post: postRating, processing: ratingProcessing, errors: ratingErrors, reset: resetRating } = useForm({
         rating: 5,
@@ -159,7 +166,7 @@ export default function Review({ auth, order }) {
                                 <div className="p-6 border-b-2 border-slate-900 bg-slate-50 flex justify-between items-center">
                                     <h3 className="font-black text-xl text-slate-900">Preview Deliverable</h3>
                                     {displayFile && (
-                                        <a href={`/storage/${displayFile}`} target="_blank" className="font-bold text-blue-600 hover:underline flex items-center gap-2">
+                                        <a href={getFileUrl(displayFile)} target="_blank" className="font-bold text-blue-600 hover:underline flex items-center gap-2">
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                             Download File
                                         </a>
@@ -169,14 +176,14 @@ export default function Review({ auth, order }) {
                                     {/* File Display */}
                                     {displayFile ? (
                                         isImage(displayFile) ? (
-                                            <img src={`/storage/${displayFile}`} alt="Result Preview" className="max-w-full max-h-[600px] rounded-xl shadow-lg border-2 border-slate-200" />
+                                            <img src={getFileUrl(displayFile)} alt="Result Preview" className="max-w-full max-h-[600px] rounded-xl shadow-lg border-2 border-slate-200" />
                                         ) : (
                                             <div className="text-center">
                                                 <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-slate-300">
                                                     <svg className="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                                 </div>
                                                 <p className="text-slate-500 font-bold mb-2">File Format Not Supported for Preview</p>
-                                                <a href={`/storage/${displayFile}`} target="_blank" className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition">Download to View</a>
+                                                <a href={getFileUrl(displayFile)} target="_blank" className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition">Download to View</a>
                                             </div>
                                         )
                                     ) : (
@@ -325,7 +332,7 @@ export default function Review({ auth, order }) {
                                                     {file.note && <p className="text-xs text-slate-400 italic truncate">"{file.note}"</p>}
                                                 </div>
                                                 <a
-                                                    href={`/storage/${file.file_path}`}
+                                                    href={getFileUrl(file.file_path)}
                                                     target="_blank"
                                                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
                                                     title="Download"

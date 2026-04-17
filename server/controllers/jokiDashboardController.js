@@ -317,6 +317,7 @@ export const uploadResult = async (req, res) => {
             where: { id: parseInt(id) },
             data: {
                 result_file: resultFileUrl || external_link || order.result_file,
+                result_note: note || null,
                 status: 'review',
                 updated_at: new Date()
             }

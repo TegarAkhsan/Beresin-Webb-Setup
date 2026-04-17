@@ -5,6 +5,13 @@ import Modal from '@/Components/Modal';
 import SecondaryButton from '@/Components/SecondaryButton';
 import PrimaryButton from '@/Components/PrimaryButton';
 
+// Helper: returns full URL if already absolute, else prepends /storage/
+const getFileUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    return `/storage/${path}`;
+};
+
 export default function Verify({ auth, orders, additionalPaymentOrders }) {
     const [confirmingApproval, setConfirmingApproval] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -80,7 +87,7 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                                     <div className="flex gap-2 pt-3 border-t border-gray-200">
                                         {order.payment_proof ? (
                                             <a
-                                                href={'/storage/' + order.payment_proof}
+                                                href={getFileUrl(order.payment_proof)}
                                                 target="_blank"
                                                 className="flex-1 text-center py-2 bg-blue-50 text-blue-600 rounded-md text-sm font-bold border border-blue-100"
                                             >
@@ -143,7 +150,7 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                                         </td>
                                         <td className="px-6 py-4">
                                             {order.payment_proof ? (
-                                                <a href={'/storage/' + order.payment_proof} target="_blank" className="text-blue-600 underline hover:text-blue-800">
+                                                <a href={getFileUrl(order.payment_proof)} target="_blank" className="text-blue-600 underline hover:text-blue-800">
                                                     View Proof
                                                 </a>
                                             ) : (
@@ -340,9 +347,87 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                             <div>
                                 <p className="text-xs text-gray-500 uppercase font-bold mb-1">Description / Project Notes</p>
                                 <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700 border border-gray-200">
-                                    {viewingOrder.description}
+                                    {viewingOrder.description || <em className="text-gray-400">No description.</em>}
                                 </div>
                             </div>
+
+                            {/* Customer Notes */}
+                            {viewingOrder.notes && (
+                                <div>
+                                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Catatan Tambahan Customer</p>
+                                    <div className="bg-yellow-50 p-4 rounded-lg text-sm text-yellow-900 border border-yellow-200">
+                                        {viewingOrder.notes}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Customer Submitted Links & Files */}
+                            {(viewingOrder.external_link || viewingOrder.reference_file || viewingOrder.previous_project_file || viewingOrder.student_card) && (
+                                <div className="border-t pt-4">
+                                    <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                        <span className="text-base">📎</span> Lampiran & Link Customer
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {viewingOrder.external_link && (
+                                            <a
+                                                href={viewingOrder.external_link}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition"
+                                            >
+                                                <span className="text-blue-600 text-xl">🔗</span>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-xs font-bold text-blue-700 uppercase mb-0.5">External Link (Reference URL)</p>
+                                                    <p className="text-sm text-blue-800 underline truncate">{viewingOrder.external_link}</p>
+                                                </div>
+                                                <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                            </a>
+                                        )}
+                                        {viewingOrder.reference_file && (
+                                            <a
+                                                href={getFileUrl(viewingOrder.reference_file)}
+                                                target="_blank"
+                                                className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition"
+                                            >
+                                                <span className="text-gray-600 text-xl">📄</span>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-xs font-bold text-gray-700 uppercase mb-0.5">Reference File</p>
+                                                    <p className="text-sm text-gray-600">Download / View</p>
+                                                </div>
+                                                <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                            </a>
+                                        )}
+                                        {viewingOrder.previous_project_file && (
+                                            <a
+                                                href={getFileUrl(viewingOrder.previous_project_file)}
+                                                target="_blank"
+                                                className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition"
+                                            >
+                                                <span className="text-gray-600 text-xl">📦</span>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-xs font-bold text-gray-700 uppercase mb-0.5">Previous Project Assets</p>
+                                                    <p className="text-sm text-gray-600">Download / View</p>
+                                                </div>
+                                                <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                            </a>
+                                        )}
+                                        {viewingOrder.student_card && (
+                                            <a
+                                                href={getFileUrl(viewingOrder.student_card)}
+                                                target="_blank"
+                                                className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition"
+                                            >
+                                                <span className="text-indigo-600 text-xl">🎓</span>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-xs font-bold text-indigo-700 uppercase mb-0.5">Kartu Mahasiswa (KTM)</p>
+                                                    <p className="text-sm text-indigo-600">View Student Card</p>
+                                                </div>
+                                                <svg className="w-4 h-4 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Negotiation Details */}
                             {viewingOrder.is_negotiation && (
@@ -479,21 +564,7 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                                 </div>
                             )}
 
-                            {/* Files */}
-                            {(viewingOrder.reference_file || viewingOrder.previous_project_file) && (
-                                <div className="border-t pt-4 flex gap-4">
-                                    {viewingOrder.reference_file && (
-                                        <a href={`/storage/${viewingOrder.reference_file}`} target="_blank" className="text-sm text-blue-600 hover:underline">
-                                            📄 Reference File
-                                        </a>
-                                    )}
-                                    {viewingOrder.previous_project_file && (
-                                        <a href={`/storage/${viewingOrder.previous_project_file}`} target="_blank" className="text-sm text-blue-600 hover:underline">
-                                            📁 Project Assets
-                                        </a>
-                                    )}
-                                </div>
-                            )}
+                            {/* Files section moved above – this block is now redundant */}
                         </div>
 
                         <div className="mt-6 flex justify-end gap-3 pt-4 border-t">

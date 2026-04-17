@@ -47,7 +47,9 @@ router.get('/admin/services', requireAuth, isAdmin, services);
 router.post('/admin/services', requireAuth, isAdmin, storeService);
 router.get('/admin/services/:id/edit', requireAuth, isAdmin, editService);
 router.post('/admin/services/:id', requireAuth, isAdmin, updateService);
+router.put('/admin/services/:id', requireAuth, isAdmin, updateService);      // Inertia useForm put()
 router.post('/admin/services/:id/delete', requireAuth, isAdmin, deleteService);
+router.delete('/admin/services/:id', requireAuth, isAdmin, deleteService);   // Inertia router.delete()
 
 // ─── Packages (admin.services.packages.store / admin.packages.update / admin.packages.destroy) ──
 router.post('/admin/services/:serviceId/packages', requireAuth, isAdmin, storePackage);

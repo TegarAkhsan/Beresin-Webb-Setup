@@ -12,6 +12,13 @@ import TasksTab from './Joki/TasksTab';
 import EarningsTab from './Joki/EarningsTab';
 import CompletedTab from './Joki/CompletedTab';
 
+// Helper: returns full URL if already absolute, else prepends /storage/
+const getFileUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    return `/storage/${path}`;
+};
+
 export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = [], reviewTasks = [], completedTasks = [], stats, financials }) {
     // Tab state management
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -295,6 +302,18 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                                         </p>
                                     </div>
 
+                                    {/* Customer Notes */}
+                                    {previewTask.notes && (
+                                        <div className="bg-yellow-50 rounded-xl p-5 border border-yellow-200">
+                                            <h3 className="font-bold text-yellow-800 text-xs uppercase tracking-wide mb-3 flex items-center gap-2">
+                                                <span>📌</span> Catatan Customer
+                                            </h3>
+                                            <p className="text-sm text-yellow-900 leading-relaxed whitespace-pre-wrap">
+                                                {previewTask.notes}
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {/* Customer Assets */}
                                     {(previewTask.external_link || previewTask.reference_file) && (
                                         <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
@@ -429,7 +448,7 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                                                     <span className="text-lg">📄</span>
                                                     <div>
                                                         <p className="text-xs font-bold text-blue-800 uppercase">Reference File</p>
-                                                        <a href={`/storage/${detailTask.reference_file}`} target="_blank" rel="noreferrer" className="text-blue-600 underline text-sm hover:text-blue-800">
+                                                        <a href={getFileUrl(detailTask.reference_file)} target="_blank" rel="noreferrer" className="text-blue-600 underline text-sm hover:text-blue-800">
                                                             Download PDF
                                                         </a>
                                                     </div>
@@ -440,7 +459,7 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                                                     <span className="text-lg">📦</span>
                                                     <div>
                                                         <p className="text-xs font-bold text-blue-800 uppercase">Previous Project</p>
-                                                        <a href={`/storage/${detailTask.previous_project_file}`} target="_blank" rel="noreferrer" className="text-blue-600 underline text-sm hover:text-blue-800">
+                                                        <a href={getFileUrl(detailTask.previous_project_file)} target="_blank" rel="noreferrer" className="text-blue-600 underline text-sm hover:text-blue-800">
                                                             Download PDF
                                                         </a>
                                                     </div>
@@ -497,6 +516,18 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                                         {detailTask.description}
                                     </div>
                                 </div>
+
+                                {/* Customer Notes */}
+                                {detailTask.notes && (
+                                    <div>
+                                        <h3 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                                            <span>📌</span> Catatan Customer
+                                        </h3>
+                                        <div className="bg-yellow-50 p-4 rounded-lg text-sm text-yellow-900 whitespace-pre-wrap leading-relaxed border border-yellow-200">
+                                            {detailTask.notes}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-6 flex justify-end pt-4 border-t border-gray-100">

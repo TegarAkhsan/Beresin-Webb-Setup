@@ -278,6 +278,7 @@ export const approveAdditionalPayment = async (req, res) => {
     }
 };
 
+
 export const batchAutoAssign = async (req, res) => {
     try {
         const pendingOrders = await prisma.orders.findMany({
@@ -374,13 +375,21 @@ export const createUser = async (req, res) => {
 };
 
 export const storeUser = async (req, res) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, specialization } = req.body;
     try {
         const hashed = await bcrypt.hash(password, 10);
         await prisma.users.create({
-            data: { name, email, password: hashed, role: role || 'customer', created_at: new Date(), updated_at: new Date() }
+            data: {
+                name,
+                email,
+                password: hashed,
+                role: role || 'customer',
+                specialization: (role === 'joki' && specialization) ? specialization : null,
+                created_at: new Date(),
+                updated_at: new Date()
+            }
         });
-        return flashRedirect(res, '/admin/users', 'User berhasil dibuat');
+        return flashRedirect(res, '/admin/users', `Akun ${role === 'joki' ? 'Joki' : 'user'} berhasil dibuat`);
     } catch (error) {
         console.error('[CREATE USER ERROR]', error.message);
         return flashRedirect(res, '/admin/users/create', 'Gagal membuat user: ' + error.message, true);
