@@ -173,10 +173,10 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
 
         // Inertia useForm tidak support multiple files, gunakan router.post dengan FormData
         const formData = new FormData();
-        if (data.file)         formData.append('file', data.file);
+        if (data.file) formData.append('file', data.file);
         if (data.external_link) formData.append('external_link', data.external_link);
         if (data.version_label) formData.append('version_label', data.version_label);
-        if (data.note)         formData.append('note', data.note);
+        if (data.note) formData.append('note', data.note);
         if (data.milestone_id) formData.append('milestone_id', String(data.milestone_id));
 
         // Append all proof images
@@ -726,7 +726,7 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                         </div>
 
                         {/* ── Version Label & Note ─────────────────────── */}
-                        <div className="pt-4 mb-4">
+                        uat<div className="pt-4 mb-4">
                             <InputLabel value="Version Label" className="mb-2" />
                             <TextInput
                                 type="text"

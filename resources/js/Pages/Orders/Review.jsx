@@ -43,8 +43,16 @@ export default function Review({ auth, order }) {
         return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp'].includes(ext);
     };
 
+    const isPdf = (path) => {
+        if (!path) return false;
+        const ext = path.split('.').pop().toLowerCase().split('?')[0];
+        return ext === 'pdf';
+    };
+
     // Alias: cek apakah file adalah gambar (dipakai untuk decided download link visibility)
     const isImageFile = isImage;
+
+    const [showPdfPreview, setShowPdfPreview] = useState(true);
 
     const handleAccept = (e) => {
         e.preventDefault();
@@ -205,16 +213,89 @@ export default function Review({ auth, order }) {
                                 )}
 
                                 {/* ── File Pengerjaan Preview ── */}
-                                <div className="p-8 flex flex-col items-center justify-center min-h-[300px] bg-slate-100 gap-6">
+                                <div className={`flex flex-col items-center justify-center bg-slate-100 gap-6 ${displayFile && isPdf(displayFile) && showPdfPreview ? '' : 'p-8 min-h-[300px]'}`}>
                                     {displayFile ? (
                                         isImage(displayFile) ? (
+                                            // ── Preview Gambar ──
                                             <img src={getFileUrl(displayFile)} alt="Result Preview" className="max-w-full max-h-[500px] rounded-xl shadow-lg border-2 border-slate-200" />
+                                        ) : isPdf(displayFile) ? (
+                                            // ── Preview PDF ──
+                                            <div className="w-full">
+                                                {/* Toolbar PDF */}
+                                                <div className="flex items-center justify-between px-5 py-3 bg-slate-200 border-b border-slate-300">
+                                                    <div className="flex items-center gap-2">
+                                                        {/* PDF icon */}
+                                                        <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd"/>
+                                                        </svg>
+                                                        <span className="text-sm font-bold text-slate-700">Preview PDF</span>
+                                                        <span className="text-xs text-slate-500 italic ml-1">— Document Viewer</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowPdfPreview(v => !v)}
+                                                            className="text-xs font-bold px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition flex items-center gap-1"
+                                                        >
+                                                            {showPdfPreview ? (
+                                                                <>
+                                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                                                                    Sembunyikan
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                                                    Tampilkan
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                        <a
+                                                            href={getFileUrl(displayFile)}
+                                                            target="_blank"
+                                                            download
+                                                            className="text-xs font-bold px-3 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition flex items-center gap-1"
+                                                        >
+                                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                                            Download PDF
+                                                        </a>
+                                                    </div>
+                                                </div>
+
+                                                {/* PDF Iframe Viewer */}
+                                                {showPdfPreview ? (
+                                                    <iframe
+                                                        src={`${getFileUrl(displayFile)}#toolbar=1&navpanes=0&scrollbar=1`}
+                                                        className="w-full border-0"
+                                                        style={{ height: '680px' }}
+                                                        title="PDF Preview"
+                                                        loading="lazy"
+                                                    />
+                                                ) : (
+                                                    <div className="flex flex-col items-center justify-center p-10 gap-4 min-h-[200px]">
+                                                        <svg className="w-14 h-14 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd"/>
+                                                        </svg>
+                                                        <p className="text-slate-500 font-bold text-sm">Preview disembunyikan</p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowPdfPreview(true)}
+                                                            className="px-5 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-700 transition"
+                                                        >
+                                                            Tampilkan Preview
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         ) : (
+                                            // ── Format Lain (ZIP, DOCX, dll) ──
                                             <div className="text-center">
                                                 <div className="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-slate-300">
                                                     <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                                 </div>
-                                                <p className="text-slate-500 font-bold mb-3">File Format Not Supported for Preview</p>
+                                                <p className="text-slate-500 font-bold mb-1">File Format Not Supported for Preview</p>
+                                                <p className="text-xs text-slate-400 mb-4">
+                                                    {displayFile.split('.').pop().toUpperCase()} file — Silakan download untuk melihat isinya
+                                                </p>
                                                 <a href={getFileUrl(displayFile)} target="_blank"
                                                     className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition">
                                                     Download to View
@@ -228,6 +309,7 @@ export default function Review({ auth, order }) {
                                         </div>
                                     ) : null}
                                 </div>
+
 
                                 {/* ── External Link dari Joki ── */}
                                 {(displayLink || order.external_link) && (
