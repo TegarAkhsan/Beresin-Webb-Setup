@@ -41,7 +41,10 @@ export default function Show({ auth, order, whatsapp_number, qris_image }) {
     };
 
     const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
-    const [paymentMethod, setPaymentMethod] = useState(order.payment_method || 'va');
+    const [paymentMethod, setPaymentMethod] = useState(
+        // Untuk order negosiasi: selalu mulai dari 'va' agar customer bisa pilih bebas
+        order.is_negotiation ? 'va' : (order.payment_method || 'va')
+    );
     const [selectedBank, setSelectedBank] = useState('bca');
     const [showAcceptModal, setShowAcceptModal] = useState(false);
     const [showRevisionModal, setShowRevisionModal] = useState(false);
@@ -210,8 +213,8 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
 
                                     {order.status === 'pending_payment' && !order.payment_proof && (
                                         <>
-                                            {/* Logic: If payment_method is set, force that view. Else show tabs (fallback) */}
-                                            {!order.payment_method && (
+                                            {/* Tabs: tampilkan SELALU untuk negosiasi, atau jika payment_method belum diset */}
+                                            {(!order.payment_method || order.is_negotiation) && (
                                                 <div className="flex gap-4 mb-6">
                                                     <button
                                                         onClick={() => setPaymentMethod('va')}
@@ -227,6 +230,7 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                                     </button>
                                                 </div>
                                             )}
+
 
                                             {/* VA Content */}
                                             {(paymentMethod === 'va') && (
