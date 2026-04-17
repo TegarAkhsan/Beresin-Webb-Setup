@@ -28,14 +28,14 @@ export default function ServiceModal({ show, onClose, serviceToEdit }) {
         e.preventDefault();
 
         if (serviceToEdit) {
-            put(route('admin.services.update', serviceToEdit.id), {
+            put(`/admin/services/${serviceToEdit.id}`, {
                 onSuccess: () => {
                     reset();
                     onClose();
                 },
             });
         } else {
-            post(route('admin.services.store'), {
+            post('/admin/services', {
                 onSuccess: () => {
                     reset();
                     onClose();

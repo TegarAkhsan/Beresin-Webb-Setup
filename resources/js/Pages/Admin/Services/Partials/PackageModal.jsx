@@ -53,13 +53,13 @@ export default function PackageModal({ show, onClose, serviceId, packageToEdit }
         e.preventDefault();
 
         if (packageToEdit) {
-            put(route('admin.packages.update', packageToEdit.id), {
+            put(`/admin/packages/${packageToEdit.id}`, {
                 onSuccess: () => {
                     onClose(); // Close on success of main package update
                 },
             });
         } else {
-            post(route('admin.services.packages.store', serviceId), {
+            post(`/admin/services/${serviceId}/packages`, {
                 onSuccess: () => {
                     reset();
                     onClose();
@@ -80,7 +80,7 @@ export default function PackageModal({ show, onClose, serviceId, packageToEdit }
 
     const deleteAddon = (addon) => {
         if (confirm('Are you sure you want to delete this feature?')) {
-            router.delete(route('admin.addons.destroy', addon.id), {
+            router.delete(`/admin/addons/${addon.id}`, {
                 preserveScroll: true,
             });
         }

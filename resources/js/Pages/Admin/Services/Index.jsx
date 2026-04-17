@@ -69,9 +69,9 @@ export default function Index({ auth, services }) {
         const { type, item } = deleteState;
         setIsDeleting(true);
 
-        const routeName = type === 'package' ? 'admin.packages.destroy' : 'admin.services.destroy';
+        const url = type === 'package' ? `/admin/packages/${item.id}` : `/admin/services/${item.id}`;
 
-        router.delete(route(routeName, item.id), {
+        router.delete(url, {
             onSuccess: () => {
                 setIsDeleting(false);
                 setDeleteState({ show: false, type: null, item: null });

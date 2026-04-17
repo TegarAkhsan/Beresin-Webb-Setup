@@ -33,14 +33,14 @@ export default function AddonModal({ show, onClose, packageId, addonToEdit }) {
         e.preventDefault();
 
         if (addonToEdit) {
-            put(route('admin.addons.update', addonToEdit.id), {
+            put(`/admin/addons/${addonToEdit.id}`, {
                 onSuccess: () => {
                     reset();
                     onClose();
                 },
             });
         } else {
-            post(route('admin.packages.addons.store', packageId), {
+            post(`/admin/packages/${packageId}/addons`, {
                 onSuccess: () => {
                     reset();
                     onClose();
