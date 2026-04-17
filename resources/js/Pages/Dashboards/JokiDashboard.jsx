@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, router, Link } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
+import useAutoReload from '@/Hooks/useAutoReload';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
@@ -23,6 +24,9 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
     // Tab state management
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // Silent background polling — refresh data every 20s without page flicker
+    useAutoReload(['activeTasks', 'reviewTasks', 'upcomingTasks', 'completedTasks', 'stats', 'financials'], 20_000);
 
     // Modal states
     const [showUploadModal, setShowUploadModal] = useState(false);

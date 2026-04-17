@@ -6,8 +6,12 @@ import ConfirmationModal from '@/Components/ConfirmationModal'; // Added this im
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import TextInput from '@/Components/TextInput';
+import useAutoReload from '@/Hooks/useAutoReload';
 
 export default function Assign({ auth, orders, assignedOrders, jokis, filters }) {
+    // Silent background polling — refresh pending + active assignments every 25s
+    useAutoReload(['orders', 'assignedOrders', 'jokis'], 25_000);
+
     const { data, setData, post, processing, errors, reset } = useForm({
         assignment_type: 'manual',
         joki_id: '',

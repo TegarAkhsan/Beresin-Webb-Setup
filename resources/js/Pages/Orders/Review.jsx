@@ -6,6 +6,7 @@ import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import Modal from '@/Components/Modal';
 import { useState } from 'react';
+import useAutoReload from '@/Hooks/useAutoReload';
 
 // Helper: returns full URL if already absolute, else prepends /storage/
 const getFileUrl = (path) => {
@@ -15,6 +16,9 @@ const getFileUrl = (path) => {
 };
 
 export default function Review({ auth, order }) {
+    // Silent background polling — 20s to detect new uploads from joki
+    useAutoReload(['order'], 20_000);
+
     const { data: ratingData, setData: setRatingData, post: postRating, processing: ratingProcessing, errors: ratingErrors, reset: resetRating } = useForm({
         rating: 5,
         comment: ''

@@ -256,6 +256,9 @@ export const show = async (req, res) => {
         res.inertia('Orders/Show', {
             order: {
                 ...serialized,
+                // Eksplisit cast boolean agar tidak hilang saat serialisasi
+                is_negotiation: order.is_negotiation === true,
+                proposed_price: order.proposed_price != null ? Number(order.proposed_price) : null,
                 selected_features: selectedFeatures,
                 package: {
                     id: order.packages?.id,
@@ -265,7 +268,7 @@ export const show = async (req, res) => {
                     joki_fee: Number(order.packages?.joki_fee || 0),
                     duration_days: order.packages?.duration_days,
                     max_revisions: order.packages?.max_revisions,
-                    is_negotiable: order.packages?.is_negotiable,
+                    is_negotiable: order.packages?.is_negotiable === true,
                     features: order.packages?.features,
                     service: order.packages?.services ? {
                         id: order.packages.services.id,

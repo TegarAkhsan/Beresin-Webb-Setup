@@ -6,8 +6,12 @@ import Modal from '@/Components/Modal';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import { useState, useEffect } from 'react';
+import useAutoReload from '@/Hooks/useAutoReload';
 
 export default function Show({ auth, order, whatsapp_number, qris_image }) {
+    // Silent background polling — 15s for active order pages so status updates fast
+    useAutoReload(['order'], 15_000);
+
     const { data, setData, post, processing, errors } = useForm({
         payment_proof: null,
         result_file: null,
@@ -172,7 +176,11 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                             {(order.status === 'pending_payment' || order.status === 'waiting_approval') && (
                                 <div className="bg-white rounded-2xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] p-6">
                                     <h3 className="text-xl font-black text-slate-900 mb-6 pb-4 border-b-2 border-slate-100">
-                                        {order.status === 'waiting_approval' ? 'Payment Status' : 'Payment Instructions'}
+                                        {order.status === 'waiting_approval'
+                                            ? 'Status Proposal'
+                                            : (order.is_negotiation && order.status === 'pending_payment')
+                                                ? 'Lakukan Pembayaran'
+                                                : 'Payment Instructions'}
                                     </h3>
 
                                     {/* Banner khusus: Proposal Pelajar Diterima */}
@@ -342,25 +350,39 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                     {order.status === 'waiting_approval' && (
                                         <div className="text-center py-6">
                                             {order.is_negotiation ? (
-                                                // Negotiation (paket pelajar) - Proposal awaiting admin review
-                                                <div className="bg-indigo-50 border-2 border-indigo-400 p-6 rounded-2xl mb-6">
-                                                    <div className="text-4xl mb-4">🤝</div>
-                                                    <h3 className="font-bold text-lg text-indigo-800 mb-2">Proposal Sedang Ditinjau Admin</h3>
-                                                    <p className="text-indigo-700">Proposal Anda telah diterima! Admin akan menghubungi Anda untuk negosiasi harga dan detail proyek.</p>
-                                                    {order.proposed_price > 0 && (
-                                                        <div className="mt-4 bg-white p-3 rounded-xl border border-indigo-200 text-sm">
-                                                            <p className="text-indigo-600 font-semibold">Penawaran Anda: <span className="text-indigo-800 font-black">Rp {new Intl.NumberFormat('id-ID').format(order.proposed_price)}</span></p>
+                                                order.payment_proof ? (
+                                                    /* Fase 2: sudah bayar, menunggu verifikasi admin */
+                                                    <div className="bg-emerald-50 border-2 border-emerald-400 p-6 rounded-2xl mb-6">
+                                                        <div className="text-4xl mb-4">💳</div>
+                                                        <h3 className="font-bold text-lg text-emerald-800 mb-2">Pembayaran Sedang Diverifikasi</h3>
+                                                        <p className="text-emerald-700 mb-3">Terima kasih! Bukti pembayaran Anda sedang dalam proses verifikasi oleh admin.</p>
+                                                        <div className="bg-white border border-emerald-200 rounded-xl p-3 text-sm">
+                                                            <p className="text-gray-500 font-semibold mb-1">Total yang dibayar:</p>
+                                                            <p className="text-2xl font-black text-emerald-700">Rp {new Intl.NumberFormat('id-ID').format(order.amount)}</p>
                                                         </div>
-                                                    )}
-                                                </div>
+                                                    </div>
+                                                ) : (
+                                                    /* Fase 1: proposal awal menunggu review admin */
+                                                    <div className="bg-indigo-50 border-2 border-indigo-400 p-6 rounded-2xl mb-6">
+                                                        <div className="text-4xl mb-4">🤝</div>
+                                                        <h3 className="font-bold text-lg text-indigo-800 mb-2">Proposal Sedang Ditinjau Admin</h3>
+                                                        <p className="text-indigo-700">Proposal Anda telah dikirim! Admin akan meninjau dan segera menghubungi Anda.</p>
+                                                        {order.proposed_price > 0 && (
+                                                            <div className="mt-4 bg-white p-3 rounded-xl border border-indigo-200 text-sm">
+                                                                <p className="text-indigo-600 font-semibold">Penawaran Anda: <span className="text-indigo-800 font-black">Rp {new Intl.NumberFormat('id-ID').format(order.proposed_price)}</span></p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
                                             ) : (
-                                                // Regular payment - payment under verification
+                                                /* Regular payment - payment under verification */
                                                 <div className="bg-yellow-50 border-2 border-yellow-400 p-6 rounded-2xl mb-6">
                                                     <div className="text-4xl mb-4">⏳</div>
                                                     <h3 className="font-bold text-lg text-yellow-800 mb-2">Payment Under Verification</h3>
                                                     <p className="text-yellow-700">Thank you! Your payment is being reviewed.</p>
                                                 </div>
                                             )}
+
                                             <div className="bg-gray-50 p-4 rounded-xl text-sm text-gray-500">
                                                 <p>{order.is_negotiation ? 'Admin akan menghubungi Anda via WhatsApp segera.' : 'Admin has been notified via WhatsApp.'}</p>
                                             </div>

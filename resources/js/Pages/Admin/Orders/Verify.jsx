@@ -3,6 +3,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import Modal from '@/Components/Modal';
 import SecondaryButton from '@/Components/SecondaryButton';
+import useAutoReload from '@/Hooks/useAutoReload';
 import PrimaryButton from '@/Components/PrimaryButton';
 
 // Helper: returns full URL if already absolute, else prepends /storage/
@@ -13,6 +14,9 @@ const getFileUrl = (path) => {
 };
 
 export default function Verify({ auth, orders, additionalPaymentOrders }) {
+    // Silent background polling — auto refresh payment queue every 25s
+    useAutoReload(['orders', 'additionalPaymentOrders'], 25_000);
+
     const [confirmingApproval, setConfirmingApproval] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const { post, processing } = useForm();

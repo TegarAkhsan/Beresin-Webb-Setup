@@ -122,16 +122,37 @@ export const verify = async (req, res) => {
 export const approvePayment = async (req, res) => {
     const { id } = req.params;
     try {
+        const order = await prisma.orders.findUnique({ where: { id: parseInt(id) } });
+        if (!order) return flashRedirect(res, '/admin/orders/verify', 'Order tidak ditemukan', true);
+
+        let newStatus;
+        let extraData = {};
+
+        if (order.is_negotiation && order.status === 'waiting_approval') {
+            // Paket pelajar: admin approve proposal → customer harus bayar dulu
+            newStatus = 'pending_payment';
+        } else {
+            // Regular payment: admin approve bukti bayar → langsung ke queue assignment
+            newStatus = 'pending_assignment';
+            extraData = { payment_status: 'paid', invoice_number: generateInvoiceNumber() };
+        }
+
         await prisma.orders.update({
             where: { id: parseInt(id) },
-            data: { status: 'pending_assignment', payment_status: 'paid', invoice_number: generateInvoiceNumber(), updated_at: new Date() }
+            data: { status: newStatus, updated_at: new Date(), ...extraData }
         });
-        return flashRedirect(res, '/admin/orders/verify', 'Pembayaran berhasil disetujui');
+
+        const msg = order.is_negotiation && order.status === 'waiting_approval'
+            ? 'Proposal diterima! Customer akan diarahkan ke halaman pembayaran.'
+            : 'Pembayaran berhasil disetujui';
+
+        return flashRedirect(res, '/admin/orders/verify', msg);
     } catch (error) {
         console.error('[APPROVE PAYMENT ERROR]', error.message);
-        return flashRedirect(res, '/admin/orders/verify', 'Gagal menyetujui pembayaran', true);
+        return flashRedirect(res, '/admin/orders/verify', 'Gagal menyetujui: ' + error.message, true);
     }
 };
+
 
 // ─── Assign Orders ────────────────────────────────────────────────────────────
 export const assign = async (req, res) => {

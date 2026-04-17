@@ -1,6 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import useAutoReload from '@/Hooks/useAutoReload';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
@@ -8,6 +9,9 @@ import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 
 export default function Dashboard({ auth, stats = {}, joki_workload = [], payoutRequests = [] }) {
+    // Silent background polling — refresh admin dashboard data every 30s
+    useAutoReload(['stats', 'joki_workload', 'payoutRequests'], 30_000);
+
     const [processModalOpen, setProcessModalOpen] = useState(false);
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [detailsModalOpen, setDetailsModalOpen] = useState(false);
