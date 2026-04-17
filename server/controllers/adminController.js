@@ -520,15 +520,21 @@ export const deleteService = async (req, res) => {
 
 export const storePackage = async (req, res) => {
     const { serviceId } = req.params;
-    const { name, description, price, revision_limit, duration_days } = req.body;
+    const { name, description, price, features, is_negotiable, duration_days } = req.body;
     try {
+        let processedFeatures = [];
+        if (features) {
+            processedFeatures = features.split('\n').map(f => f.trim()).filter(f => f);
+        }
+
         await prisma.packages.create({
             data: {
                 service_id: parseInt(serviceId),
                 name, description,
                 price: parseFloat(price || 0),
-                revision_limit: parseInt(revision_limit || 0),
-                duration_days: parseInt(duration_days || 0),
+                duration_days: parseInt(duration_days || 3),
+                features: JSON.stringify(processedFeatures),
+                is_negotiable: is_negotiable === true || is_negotiable === 'true' || is_negotiable === '1',
                 created_at: new Date(), updated_at: new Date()
             }
         });
@@ -541,15 +547,29 @@ export const storePackage = async (req, res) => {
 
 export const updatePackage = async (req, res) => {
     const { id } = req.params;
-    const { name, description, price, revision_limit, duration_days } = req.body;
+    const { name, description, price, features, is_negotiable, duration_days } = req.body;
     try {
+        let processedFeatures = [];
+        if (features) {
+            processedFeatures = features.split('\n').map(f => f.trim()).filter(f => f);
+        }
+
         const pkg = await prisma.packages.findUnique({ where: { id: parseInt(id) } });
         await prisma.packages.update({
             where: { id: parseInt(id) },
-            data: { name, description, price: parseFloat(price || 0), revision_limit: parseInt(revision_limit || 0), duration_days: parseInt(duration_days || 0), updated_at: new Date() }
+            data: { 
+                name, 
+                description, 
+                price: parseFloat(price || 0), 
+                duration_days: parseInt(duration_days || 3),
+                features: JSON.stringify(processedFeatures),
+                is_negotiable: is_negotiable === true || is_negotiable === 'true' || is_negotiable === '1',
+                updated_at: new Date() 
+            }
         });
         return flashRedirect(res, `/admin/services/${pkg.service_id}/edit`, 'Package berhasil diupdate');
     } catch (error) {
+        console.error('[UPDATE PACKAGE ERROR]', error.message);
         return flashRedirect(res, '/admin/services', 'Gagal update package', true);
     }
 };
