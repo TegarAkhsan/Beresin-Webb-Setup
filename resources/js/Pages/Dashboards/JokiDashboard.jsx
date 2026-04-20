@@ -20,6 +20,54 @@ const getFileUrl = (path) => {
     return `/storage/${path}`;
 };
 
+// Helper: Client-side compression to bypass 6MB max payload limits for Serverless/Netlify
+const compressImageClient = (file, maxWidth = 1280) => {
+    return new Promise((resolve) => {
+        if (!file.type.startsWith('image/') || file.type === 'image/gif') {
+            return resolve(file);
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxWidth) {
+                        width *= maxWidth / height;
+                        height = maxWidth;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                        type: 'image/webp',
+                        lastModified: Date.now(),
+                    });
+                    resolve(newFile);
+                }, 'image/webp', 0.8);
+            };
+            img.onerror = () => resolve(file);
+        };
+        reader.onerror = () => resolve(file);
+    });
+};
+
 export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = [], reviewTasks = [], completedTasks = [], stats, financials }) {
     // Tab state management
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -669,7 +717,12 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                                     type="file"
                                     name="file"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    onChange={(e) => setData('file', e.target.files[0] || null)}
+                                    onChange={async (e) => {
+                                        const f = e.target.files[0];
+                                        if (!f) return setData('file', null);
+                                        const compressedFile = await compressImageClient(f);
+                                        setData('file', compressedFile);
+                                    }}
                                 />
                                 <div className="text-gray-400 group-hover:text-indigo-500">
                                     {data.file ? (
@@ -700,10 +753,11 @@ export default function JokiDashboard({ auth, upcomingTasks = [], activeTasks = 
                                     multiple
                                     accept="image/*"
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    onChange={(e) => {
+                                    onChange={async (e) => {
                                         const files = Array.from(e.target.files);
-                                        setData('proof_images', [...(data.proof_images || []), ...files]);
-                                        const newPreviews = files.map(f => URL.createObjectURL(f));
+                                        const compressedFiles = await Promise.all(files.map(f => compressImageClient(f)));
+                                        setData('proof_images', [...(data.proof_images || []), ...compressedFiles]);
+                                        const newPreviews = compressedFiles.map(f => URL.createObjectURL(f));
                                         setProofImagePreviews(prev => [...prev, ...newPreviews]);
                                         // reset input so same files can be added again
                                         e.target.value = '';
