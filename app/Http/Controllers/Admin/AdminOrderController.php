@@ -46,8 +46,15 @@ class AdminOrderController extends Controller
             'additional_payment_status' => 'paid',
         ]);
 
-        return back()->with('message', 'Additional payment approved successfully.');
+        // 80% of the revision fee goes to the Joki as compensation for extra revision work
+        if ($order->additional_revision_fee > 0 && $order->joki_id) {
+            $jokiShare = $order->additional_revision_fee * 0.80;
+            $order->increment('joki_fee', $jokiShare);
+        }
+
+        return back()->with('message', 'Additional payment approved. Joki fee updated (80% of revision fee).');
     }
+
 
     public function assign()
     {

@@ -11,6 +11,7 @@ import Modal from '@/Components/Modal';
 export default function Create({ auth, packages, selectedPackageId, whatsapp_number }) {
     const user = auth.user;
     const [showSizeError, setShowSizeError] = useState(false);
+    const [fileErrorMessage, setFileErrorMessage] = useState('');
 
     const { data, setData, post, processing, errors } = useForm({
         package_id: selectedPackageId || '',
@@ -230,12 +231,44 @@ export default function Create({ auth, packages, selectedPackageId, whatsapp_num
         post(route('orders.store'));
     };
 
-    // Helper for duration text
     const formatDuration = (days) => {
         if (!days) return '3 Days'; // Default if days is null/undefined
         if (days <= 3) return '1-3 Days';
         if (days <= 7) return '6-7 Days';
         return '10-15 Days';
+    };
+
+    const handleFileChange = (e, fieldname) => {
+        const file = e.target.files[0];
+        if (!file) {
+            setData(fieldname, null);
+            return;
+        }
+
+        let validTypes = ['application/pdf']; // Default for ref/project
+        if (fieldname === 'student_card') {
+            validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+        }
+
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        if (!validTypes.includes(file.type)) {
+            setFileErrorMessage('Format file tidak didukung. Harap perhatikan format yang diperbolehkan.');
+            setShowSizeError(true);
+            e.target.value = null;
+            setData(fieldname, null);
+            return;
+        }
+
+        if (file.size > maxSize) {
+            setFileErrorMessage('Ukuran file terlalu besar. Maksimal ukuran file adalah 5MB.');
+            setShowSizeError(true);
+            e.target.value = null;
+            setData(fieldname, null);
+            return;
+        }
+
+        setData(fieldname, file);
     };
 
     const handleFeatureToggle = (featureName) => {
@@ -334,15 +367,7 @@ export default function Create({ auth, packages, selectedPackageId, whatsapp_num
                                         <div className="md:col-span-2 mt-4 p-4 border-2 border-indigo-100 bg-indigo-50 rounded-xl">
                                             <InputLabel htmlFor="student_card" value="Student ID Card (Kartu Tanda Mahasiswa)" />
                                             <p className="text-xs text-indigo-600 mb-2">Required for Student Package verification.</p>
-                                            <input type="file" id="student_card" onChange={e => {
-                                                const file = e.target.files[0];
-                                                if (file && file.size > 5 * 1024 * 1024) {
-                                                    setShowSizeError(true);
-                                                    e.target.value = null;
-                                                    return;
-                                                }
-                                                setData('student_card', file);
-                                            }} accept="image/*,application/pdf" className="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700" required />
+                                            <input type="file" id="student_card" onChange={e => handleFileChange(e, 'student_card')} accept="image/*,application/pdf" className="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700" required />
                                             <InputError message={errors.student_card} className="mt-2" />
                                         </div>
                                     )}
@@ -381,15 +406,7 @@ export default function Create({ auth, packages, selectedPackageId, whatsapp_num
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <InputLabel htmlFor="reference_file" value="Reference Brief" />
-                                            <input type="file" onChange={e => {
-                                                const file = e.target.files[0];
-                                                if (file && file.size > 5 * 1024 * 1024) {
-                                                    setShowSizeError(true);
-                                                    e.target.value = null;
-                                                    return;
-                                                }
-                                                setData('reference_file', file);
-                                            }} accept="application/pdf" className="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                            <input type="file" onChange={e => handleFileChange(e, 'reference_file')} accept="application/pdf" className="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                                             <p className="text-xs text-gray-400 mt-1">PDF Only, Max 5MB.</p>
                                             <InputError message={errors.reference_file} className="mt-2" />
                                         </div>
@@ -397,15 +414,7 @@ export default function Create({ auth, packages, selectedPackageId, whatsapp_num
                                             <InputLabel htmlFor="previous_project_file">
                                                 Previous Project / Assets <span className="text-gray-400 font-normal text-xs ml-1">(Opsional)</span>
                                             </InputLabel>
-                                            <input type="file" onChange={e => {
-                                                const file = e.target.files[0];
-                                                if (file && file.size > 5 * 1024 * 1024) {
-                                                    setShowSizeError(true);
-                                                    e.target.value = null;
-                                                    return;
-                                                }
-                                                setData('previous_project_file', file);
-                                            }} accept="application/pdf" className="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                            <input type="file" onChange={e => handleFileChange(e, 'previous_project_file')} accept="application/pdf" className="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                                             <p className="text-xs text-gray-400 mt-1">PDF Only, Max 5MB.</p>
                                             <InputError message={errors.previous_project_file} className="mt-2" />
                                         </div>
@@ -789,27 +798,22 @@ export default function Create({ auth, packages, selectedPackageId, whatsapp_num
             </div>
 
             <Modal show={showSizeError} onClose={() => setShowSizeError(false)} maxWidth="sm">
-                <div className="p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                        <svg className="w-6 h-6 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="p-6 text-center">
+                    <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600">
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
-                        File Terlalu Besar
-                    </h2>
-                    <p className="mt-1 text-base text-gray-600">
-                        Maaf, ukuran file yang Anda pilih melebihi batas <strong>5MB</strong>.
-                    </p>
-                    <p className="mt-2 text-sm text-slate-500">
-                        Silakan kompres file PDF Anda atau pilih file yang lebih kecil agar proses upload berhasil.
-                    </p>
-                    <div className="mt-6 flex justify-end">
-                        <button
-                            onClick={() => setShowSizeError(false)}
-                            className="bg-red-600 text-white font-bold py-2 px-4 rounded-xl border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-                        >
-                            Saya Mengerti
-                        </button>
                     </div>
+                    <h2 className="text-xl font-black text-slate-900 mb-2">Upload Gagal</h2>
+                    <p className="text-sm text-slate-500 mb-6">
+                        {fileErrorMessage}
+                    </p>
+                    <button
+                        onClick={() => setShowSizeError(false)}
+                        className="px-6 py-2.5 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition shadow-lg w-full"
+                    >
+                        Tutup
+                    </button>
                 </div>
             </Modal>
         </AuthenticatedLayout>

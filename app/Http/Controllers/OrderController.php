@@ -288,6 +288,11 @@ class OrderController extends Controller
             abort(403);
         }
 
+        // Payment gate: block acceptance if there are unpaid extra revision fees
+        if ($order->additional_revision_fee > 0 && $order->additional_payment_status !== 'paid') {
+            return back()->with('error', 'Anda memiliki tagihan revisi tambahan sebesar Rp ' . number_format($order->additional_revision_fee, 0, ',', '.') . ' yang belum dilunasi. Harap selesaikan pembayaran terlebih dahulu sebelum menerima hasil.');
+        }
+
         $validated = $request->validate([
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string'

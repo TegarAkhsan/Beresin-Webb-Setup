@@ -49,6 +49,8 @@ export default function Show({ auth, order, whatsapp_number, qris_image }) {
     const [showAcceptModal, setShowAcceptModal] = useState(false);
     const [showRevisionModal, setShowRevisionModal] = useState(false);
     const [showPaymentWarningModal, setShowPaymentWarningModal] = useState(false);
+    const [showFileErrorModal, setShowFileErrorModal] = useState(false);
+    const [fileErrorMessage, setFileErrorMessage] = useState('');
 
     // Flash / query message
     const pageProps = usePage().props;
@@ -67,6 +69,35 @@ export default function Show({ auth, order, whatsapp_number, qris_image }) {
         const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((ms % (1000 * 60)) / 1000);
         return `${hours}h ${minutes}m ${seconds}s`;
+    };
+
+    const handleFileChange = (e, fieldname, setterFunc) => {
+        const file = e.target.files[0];
+        if (!file) {
+            setterFunc(fieldname, null);
+            return;
+        }
+
+        const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        if (!validTypes.includes(file.type)) {
+            setFileErrorMessage('Format file tidak didukung. Hanya file JPG, PNG, dan PDF yang diperbolehkan.');
+            setShowFileErrorModal(true);
+            e.target.value = null; 
+            setterFunc(fieldname, null);
+            return;
+        }
+
+        if (file.size > maxSize) {
+            setFileErrorMessage('Ukuran file terlalu besar. Maksimal ukuran file adalah 5MB.');
+            setShowFileErrorModal(true);
+            e.target.value = null; 
+            setterFunc(fieldname, null);
+            return;
+        }
+
+        setterFunc(fieldname, file);
     };
 
     const confirmViaWhatsapp = () => {
@@ -314,7 +345,7 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                                     <form onSubmit={uploadPayment} className="flex gap-2">
                                                         <input
                                                             type="file"
-                                                            onChange={e => setData('payment_proof', e.target.files[0])}
+                                                            onChange={e => handleFileChange(e, 'payment_proof', setData)}
                                                             className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
                                                         />
                                                         <button disabled={processing} className="whitespace-nowrap bg-slate-900 text-white font-bold py-2 px-6 rounded-xl border-2 border-slate-900 shadow-[2px_2px_0px_0px_rgba(203,213,225,1)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all">Upload</button>
@@ -479,8 +510,8 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                         </div>
                                     )}
 
-                                    {/* Result Section — disembunyikan saat status review atau revision */}
-                                    {order.result_file && !['review', 'revision'].includes(order.status) && (
+                                    {/* Result Section — ditampilkan kecuali saat revision sedang berjalan (belum ada file baru) */}
+                                    {order.result_file && order.status !== 'revision' && (
                                         <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-200">
                                             <div className="text-center mb-6">
                                                 <h3 className="font-bold text-indigo-900 mb-2 text-lg">Result Available!</h3>
@@ -522,7 +553,7 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                                                     <input
                                                                         type="file"
                                                                         className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 mb-2"
-                                                                        onChange={e => setExtraPayData('payment_proof', e.target.files[0])}
+                                                                        onChange={e => handleFileChange(e, 'payment_proof', setExtraPayData)}
                                                                         required
                                                                     />
                                                                     {extraPayErrors.payment_proof && <div className="text-red-500 text-xs mb-2">{extraPayErrors.payment_proof}</div>}
@@ -731,6 +762,27 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                             <PrimaryButton disabled={revisionProcessing} className="bg-red-600 hover:bg-red-700">Submit Request</PrimaryButton>
                         </div>
                     </form>
+                </div>
+            </Modal>
+
+            {/* Error File Modal */}
+            <Modal show={showFileErrorModal} onClose={() => setShowFileErrorModal(false)} maxWidth="sm">
+                <div className="p-6 text-center">
+                    <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600">
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <h2 className="text-xl font-black text-slate-900 mb-2">Upload Gagal</h2>
+                    <p className="text-sm text-slate-500 mb-6">
+                        {fileErrorMessage}
+                    </p>
+                    <button
+                        onClick={() => setShowFileErrorModal(false)}
+                        className="px-6 py-2.5 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition shadow-lg w-full"
+                    >
+                        Tutup
+                    </button>
                 </div>
             </Modal>
         </AuthenticatedLayout >

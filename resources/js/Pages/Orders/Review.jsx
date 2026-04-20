@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link, router } from '@inertiajs/react';
+import { Head, useForm, Link, router, usePage } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
@@ -36,6 +36,16 @@ export default function Review({ auth, order }) {
 
     const [modalType, setModalType] = useState(null); // 'accept' | 'revision' | 'refund' | 'confirm_milestone' | 'payment'
     const [refundStep, setRefundStep] = useState(1);
+    const [showPaymentBanner, setShowPaymentBanner] = useState(true);
+
+    // Check if customer has unpaid extra revision fees
+    const hasUnpaidRevisionFee = order.additional_revision_fee > 0 && order.additional_payment_status !== 'paid';
+    const extraRevisionCount = order.additional_revision_fee > 0 ? Math.round(order.additional_revision_fee / 20000) : 0;
+
+    // Error flash from server-side payment gate
+    const pageProps = usePage().props;
+    const flashError = pageProps?.flash?.error || null;
+    const flashMessage = pageProps?.flash?.message || null;
 
     const isImage = (path) => {
         if (!path) return false;
@@ -130,7 +140,67 @@ export default function Review({ auth, order }) {
             <div className="py-12 bg-[#F3F3F1] min-h-screen">
                 <div className="max-w-6xl mx-auto sm:px-6 lg:px-8">
 
-                    {/* Header / Status Banner */}
+                    {/* Flash Error Banner (from server-side payment gate) */}
+                    {flashError && (
+                        <div className="mb-6 bg-red-50 border-2 border-red-500 rounded-2xl p-4 flex items-center gap-3">
+                            <svg className="w-6 h-6 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <p className="text-red-800 font-semibold">{flashError}</p>
+                        </div>
+                    )}
+                    {flashMessage && (
+                        <div className="mb-6 bg-green-50 border-2 border-green-500 rounded-2xl p-4 flex items-center gap-3">
+                            <svg className="w-6 h-6 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                            <p className="text-green-800 font-semibold">{flashMessage}</p>
+                        </div>
+                    )}
+
+                    {/* Payment Due Banner — sticky warning for unpaid revision fees */}
+                    {hasUnpaidRevisionFee && showPaymentBanner && (
+                        <div className="mb-6 bg-orange-50 border-2 border-orange-500 rounded-2xl p-5 shadow-[4px_4px_0px_0px_rgba(234,88,12,0.3)]">
+                            <div className="flex items-start gap-4">
+                                <div className="flex-shrink-0 w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-black text-orange-900 text-base mb-1">⚠️ Ada Tagihan Revisi Tambahan yang Belum Dibayar</h4>
+                                    <p className="text-orange-700 text-sm mb-3">
+                                        Anda telah mengajukan <strong>{extraRevisionCount} revisi tambahan</strong> melebihi batas gratis.
+                                        Harap lunasi tagihan sebelum menerima hasil akhir dan memberikan rating.
+                                    </p>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <div className="bg-white border border-orange-200 rounded-xl px-4 py-2">
+                                            <span className="text-xs text-gray-500 block">Total Tagihan</span>
+                                            <span className="text-xl font-black text-orange-700">
+                                                Rp {new Intl.NumberFormat('id-ID').format(order.additional_revision_fee)}
+                                            </span>
+                                            <span className="text-xs text-gray-400 block">{extraRevisionCount} revisi × Rp 20.000</span>
+                                        </div>
+                                        {order.additional_payment_status === 'pending' ? (
+                                            <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 font-bold text-sm px-4 py-2 rounded-full border border-yellow-300">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                Sedang Diverifikasi Admin
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => setModalType('payment')}
+                                                className="inline-flex items-center gap-2 bg-orange-600 text-white font-black text-sm px-5 py-2.5 rounded-xl border-2 border-orange-800 shadow-[3px_3px_0px_0px_rgba(154,52,18,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                                                Bayar Sekarang
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => setShowPaymentBanner(false)}
+                                            className="text-orange-400 hover:text-orange-600 text-xs font-bold"
+                                        >
+                                            Tutup
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="mb-8">
                         {pendingMilestone && (
                             <div className="bg-indigo-600 rounded-[2rem] p-8 text-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] border-2 border-slate-900 flex flex-col md:flex-row justify-between items-center gap-6">
@@ -361,6 +431,11 @@ export default function Review({ auth, order }) {
 
                                     <button
                                         onClick={() => {
+                                            // Payment gate: if there are unpaid revision fees, go to payment modal first
+                                            if (hasUnpaidRevisionFee) {
+                                                setModalType('payment');
+                                                return;
+                                            }
                                             if (order.milestones && order.milestones.length > 0) {
                                                 const current = order.milestones.find(m => ['submitted', 'customer_review'].includes(m.status));
                                                 const isLast = current && order.milestones[order.milestones.length - 1].id === current.id;
@@ -371,16 +446,29 @@ export default function Review({ auth, order }) {
                                             }
                                             setModalType('accept');
                                         }}
-                                        className="w-full py-4 bg-emerald-500 text-white font-black rounded-xl border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 mb-4"
+                                        className={`w-full py-4 font-black rounded-xl border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center justify-center gap-2 mb-4 ${
+                                            hasUnpaidRevisionFee
+                                                ? 'bg-orange-500 text-white opacity-90'
+                                                : 'bg-emerald-500 text-white'
+                                        }`}
                                     >
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                                        {order.milestones && order.milestones.length > 0 ? (
-                                            (() => {
-                                                const current = order.milestones.find(m => ['submitted', 'customer_review'].includes(m.status));
-                                                const isLast = current && order.milestones[order.milestones.length - 1].id === current.id;
-                                                return isLast ? "Approve & Finish Project" : "Approve Milestone & Continue";
-                                            })()
-                                        ) : "Terima Hasil & Selesai"}
+                                        {hasUnpaidRevisionFee ? (
+                                            <>
+                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                                                Lunasi Tagihan Dulu 💳
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                                {order.milestones && order.milestones.length > 0 ? (
+                                                    (() => {
+                                                        const current = order.milestones.find(m => ['submitted', 'customer_review'].includes(m.status));
+                                                        const isLast = current && order.milestones[order.milestones.length - 1].id === current.id;
+                                                        return isLast ? "Approve & Finish Project" : "Approve Milestone & Continue";
+                                                    })()
+                                                ) : "Terima Hasil & Selesai"}
+                                            </>
+                                        )}
                                     </button>
 
                                     {order.revision_count >= (order.package?.max_revisions || 3) ? (
@@ -403,7 +491,18 @@ export default function Review({ auth, order }) {
                                     )}
 
                                     {order.revision_count >= (order.package?.max_revisions || 3) && (
-                                        <p className="text-xs text-orange-600 font-bold text-center mt-2">Biaya tambahan akan diakumulasikan ke tagihan akhir.</p>
+                                        <div className="p-3 bg-orange-50 border border-orange-200 rounded-xl text-center mt-2">
+                                            <p className="text-xs text-orange-700 font-bold">Biaya revisi tambahan: Rp 20.000 / revisi</p>
+                                            {order.additional_revision_fee > 0 && (
+                                                <p className="text-xs text-orange-600 mt-0.5">
+                                                    Tagihan terkumpul: <span className="font-black">Rp {new Intl.NumberFormat('id-ID').format(order.additional_revision_fee)}</span>
+                                                    {order.additional_payment_status === 'paid'
+                                                        ? <span className="ml-1 text-green-600">✓ Lunas</span>
+                                                        : <span className="ml-1 text-orange-700">(belum dilunasi)</span>
+                                                    }
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
 
                                     <div className="pt-4 mt-4 border-t border-slate-100 text-center">
