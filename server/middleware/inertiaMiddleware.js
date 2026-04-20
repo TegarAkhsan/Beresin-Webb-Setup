@@ -51,6 +51,7 @@ export const shareInertiaData = async (req, res, next) => {
                 success: req.cookies?.flash_success || null,
                 error: req.cookies?.flash_error || null,
                 show_dashboard_prompt: req.cookies?.flash_show_dashboard_prompt || null,
+                reset_url: req.cookies?.flash_reset_url || null,
             },
             vapid_public_key: process.env.VAPID_PUBLIC_KEY || null,
             ...props
@@ -62,6 +63,7 @@ export const shareInertiaData = async (req, res, next) => {
         if (req.cookies?.flash_success) res.clearCookie('flash_success');
         if (req.cookies?.flash_error) res.clearCookie('flash_error');
         if (req.cookies?.flash_show_dashboard_prompt) res.clearCookie('flash_show_dashboard_prompt');
+        if (req.cookies?.flash_reset_url) res.clearCookie('flash_reset_url');
 
         if (!req.Inertia) {
             console.error('Inertia middleware not initialized properly');

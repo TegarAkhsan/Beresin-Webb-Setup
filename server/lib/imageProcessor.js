@@ -68,16 +68,20 @@ export async function compressImage(buffer, mimeType, fileName = '', options = {
         };
     }
 
+    // Matikan cache sharp untuk mencegah memory leak di Netlify/Lambda
+    sharp.cache(false);
+
     // Pilih kualitas berdasarkan ukuran file asal
     // File besar → kualitas lebih rendah; file kecil → kualitas lebih tinggi
-    let quality = 82; // default
+    let quality = 80; // default
     if (originalSize > 5 * 1024 * 1024)       quality = 65; // > 5MB
-    else if (originalSize > 2 * 1024 * 1024)  quality = 72; // > 2MB
-    else if (originalSize > 1 * 1024 * 1024)  quality = 78; // > 1MB
-    else if (originalSize < 200 * 1024)        quality = 90; // < 200KB → preserve quality
+    else if (originalSize > 2 * 1024 * 1024)  quality = 70; // > 2MB
+    else if (originalSize > 1 * 1024 * 1024)  quality = 75; // > 1MB
+    else if (originalSize < 200 * 1024)       quality = 85; // < 200KB → preserve quality
 
-    const maxWidth  = options.maxWidth  || 1920;
-    const maxHeight = options.maxHeight || 1920;
+    // Gunakan resolusi 1280x1280 agar lebih ringan di proses CPU serverless/Netlify
+    const maxWidth  = options.maxWidth  || 1280;
+    const maxHeight = options.maxHeight || 1280;
 
     try {
         const compressedBuffer = await sharp(buffer)
@@ -85,8 +89,10 @@ export async function compressImage(buffer, mimeType, fileName = '', options = {
             .resize(maxWidth, maxHeight, {
                 fit: 'inside',                 // Tidak memperbesar gambar kecil
                 withoutEnlargement: true,
+                fastShrinkOnLoad: true         // Percepat proses load jpeg
             })
-            .webp({ quality, effort: 4 })      // Output WebP, effort=4 = balance speed/size
+            // Gunakan effort: 1 atau 2 untuk speed kompresi di Netlify (default 4 terlalu lambat untuk ukuran besar)
+            .webp({ quality, effort: 1 })      
             .toBuffer();
 
         const compressionRatio = ((1 - compressedBuffer.length / originalSize) * 100).toFixed(1);

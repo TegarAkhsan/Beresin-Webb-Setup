@@ -262,11 +262,15 @@ export const sendResetLink = async (req, res) => {
         }
 
         if (!emailSent) {
-            // If no SMTP, log the link so dev can use it
+            // Jika SMTP tidak bisa mengirim/belum tersedia, kirim link ke frontend
             console.log(`[PASSWORD RESET LINK] ${resetUrl}`);
+            res.cookie('flash_success', 'Mode Developer/Email tidak aktif. Gunakan tombol di bawah untuk mereset password langsung:');
+            const relativeUrl = `/reset-password/${token}?email=${encodeURIComponent(email)}`;
+            res.cookie('flash_reset_url', relativeUrl);
+            return res.redirect('/forgot-password');
         }
 
-        res.cookie('flash_message', 'If that email exists, we sent a password reset link.');
+        res.cookie('flash_success', 'Tautan untuk mereset password telah dikirim ke email Anda.');
         return res.redirect('/forgot-password');
     } catch (error) {
         console.error('[FORGOT PASSWORD ERROR]', error.message);
