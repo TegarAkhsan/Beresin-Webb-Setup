@@ -64,6 +64,14 @@ export default function Show({ auth, order, whatsapp_number, qris_image }) {
         return () => clearInterval(interval);
     }, [order.created_at]);
 
+    // Show file error modal when server returns a payment_proof validation error
+    useEffect(() => {
+        if (errors.payment_proof) {
+            setFileErrorMessage(errors.payment_proof);
+            setShowFileErrorModal(true);
+        }
+    }, [errors.payment_proof]);
+
     const formatTime = (ms) => {
         const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));

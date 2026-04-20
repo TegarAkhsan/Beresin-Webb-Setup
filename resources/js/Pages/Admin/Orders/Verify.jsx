@@ -108,9 +108,16 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                                         </button>
                                         <button
                                             onClick={() => confirmApprove(order)}
-                                            className="flex-1 py-2 bg-green-600 text-white rounded-md text-sm font-bold shadow-sm"
+                                            className={`flex-1 py-2 text-white rounded-md text-sm font-bold shadow-sm ${
+                                                order.is_negotiation && !order.payment_proof
+                                                    ? 'bg-yellow-500'
+                                                    : 'bg-green-600'
+                                            }`}
                                         >
-                                            Approve
+                                            {order.is_negotiation && !order.payment_proof
+                                                ? 'Approve Proposal'
+                                                : 'Approve Payment'
+                                            }
                                         </button>
                                     </div>
                                 </div>
@@ -170,9 +177,16 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                                             </button>
                                             <button
                                                 onClick={() => confirmApprove(order)}
-                                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition shadow-sm"
+                                                className={`px-3 py-1.5 text-white rounded-md text-sm font-medium transition shadow-sm ${
+                                                    order.is_negotiation && !order.payment_proof
+                                                        ? 'bg-yellow-500 hover:bg-yellow-600'
+                                                        : 'bg-green-600 hover:bg-green-700'
+                                                }`}
                                             >
-                                                Approve
+                                                {order.is_negotiation && !order.payment_proof
+                                                    ? 'Approve Proposal'
+                                                    : 'Approve Payment'
+                                                }
                                             </button>
                                         </td>
                                     </tr>
@@ -304,18 +318,34 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
             <Modal show={confirmingApproval} onClose={closeModal}>
                 <div className="p-6">
                     <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        Approve Payment?
+                        {selectedOrder?.is_negotiation && !selectedOrder?.payment_proof
+                            ? 'Approve Proposal?'
+                            : 'Approve Payment?'
+                        }
                     </h2>
 
                     <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                        Are you sure you want to approve this payment for Order <span className="font-bold">{selectedOrder?.order_number}</span>?
-                        This will generate an invoice number and move the order to the assignment queue.
+                        {selectedOrder?.is_negotiation && !selectedOrder?.payment_proof ? (
+                            <>Apakah Anda yakin ingin menyetujui <strong>proposal</strong> dari Order <span className="font-bold">{selectedOrder?.order_number}</span>? Customer akan diarahkan untuk melakukan pembayaran.</>
+                        ) : (
+                            <>Approve <strong>payment</strong> untuk Order <span className="font-bold">{selectedOrder?.order_number}</span>? Invoice akan dibuat dan order masuk ke antrian assignment.</>
+                        )}
                     </p>
 
                     <div className="mt-6 flex justify-end gap-3">
                         <SecondaryButton onClick={closeModal}>Cancel</SecondaryButton>
-                        <PrimaryButton className="bg-green-600 hover:bg-green-700" onClick={approveOrder} disabled={processing}>
-                            Approve Payment
+                        <PrimaryButton
+                            className={selectedOrder?.is_negotiation && !selectedOrder?.payment_proof
+                                ? 'bg-yellow-500 hover:bg-yellow-600 focus:bg-yellow-600 active:bg-yellow-700'
+                                : 'bg-green-600 hover:bg-green-700'
+                            }
+                            onClick={approveOrder}
+                            disabled={processing}
+                        >
+                            {selectedOrder?.is_negotiation && !selectedOrder?.payment_proof
+                                ? 'Approve Proposal'
+                                : 'Approve Payment'
+                            }
                         </PrimaryButton>
                     </div>
                 </div>
@@ -573,8 +603,18 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
 
                         <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
                             <SecondaryButton onClick={closeDetails}>Close</SecondaryButton>
-                            <PrimaryButton className="bg-green-600 hover:bg-green-700" onClick={() => { closeDetails(); confirmApprove(viewingOrder); }}>
-                                Approve This Order
+                            <PrimaryButton
+                                className={`${
+                                    viewingOrder?.is_negotiation && !viewingOrder?.payment_proof
+                                        ? 'bg-yellow-500 hover:bg-yellow-600 focus:bg-yellow-600 active:bg-yellow-700'
+                                        : 'bg-green-600 hover:bg-green-700'
+                                }`}
+                                onClick={() => { closeDetails(); confirmApprove(viewingOrder); }}
+                            >
+                                {viewingOrder?.is_negotiation && !viewingOrder?.payment_proof
+                                    ? 'Approve Proposal'
+                                    : 'Approve Payment'
+                                }
                             </PrimaryButton>
                         </div>
                     </div>
