@@ -497,7 +497,25 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                                 <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
                                             </div>
                                             <h3 className="text-xl font-bold text-gray-900 mb-2">Order Completed!</h3>
-                                            <p className="text-gray-600">Terima kasih telah menggunakan jasa kami. Pesanan Anda telah selesai.</p>
+                                            <p className="text-gray-600 mb-5">Terima kasih telah menggunakan jasa kami. Pesanan Anda telah selesai.</p>
+                                            {/* Download result inside completed box */}
+                                            {order.result_file && (
+                                                <div className="flex flex-col gap-3 items-center mt-2">
+                                                    <a
+                                                        href={order.result_file.startsWith('http') ? order.result_file : `/storage/${order.result_file}`}
+                                                        target="_blank"
+                                                        className="inline-flex items-center gap-2 bg-emerald-600 text-white px-7 py-2.5 rounded-full font-bold border-2 border-emerald-900 shadow-[3px_3px_0px_0px_rgba(6,78,59,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-sm"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                                        Download File Hasil 📂
+                                                    </a>
+                                                    {order.external_link && (
+                                                        <a href={order.external_link} target="_blank" className="text-emerald-700 underline font-semibold text-sm hover:text-emerald-900 transition-colors">
+                                                            Visit Upload Link 🔗
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="bg-gray-50 p-6 rounded-2xl border-2 border-gray-600 shadow-[4px_4px_0px_0px_rgba(75,85,99,1)] text-center">
@@ -510,8 +528,10 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                         </div>
                                     )}
 
-                                    {/* Result Section — ditampilkan kecuali saat revision sedang berjalan (belum ada file baru) */}
-                                    {order.result_file && order.status !== 'revision' && (
+                                    {/* Result Section — ONLY shown when order is still in_progress with a result file.
+                                         review/revision → user redirected to Review page.
+                                         completed → download link is inside the Order Completed box above. */}
+                                    {order.result_file && !['completed', 'review', 'revision'].includes(order.status) && (
                                         <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-200">
                                             <div className="text-center mb-6">
                                                 <h3 className="font-bold text-indigo-900 mb-2 text-lg">Result Available!</h3>
@@ -588,15 +608,20 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                                 )}
                                             </div>
 
-                                            {/* Review Actions */}
+                                            {/* Review Actions — redirect to Review page which has full payment gate */}
                                             {(order.status === 'review' || (order.status === 'in_progress' && order.result_file)) && (
                                                 <div className="border-t border-indigo-200 pt-6 mt-6 flex flex-col sm:flex-row gap-4 justify-center">
                                                     <SecondaryButton onClick={() => setShowRevisionModal(true)} className="justify-center border-red-200 text-red-600 hover:bg-red-50">
                                                         Request Revision
                                                     </SecondaryButton>
-                                                    <PrimaryButton onClick={() => setShowAcceptModal(true)} className="justify-center bg-emerald-600 hover:bg-emerald-700 shadow-md">
+                                                    {/* Redirect to Review page — payment gate is enforced there */}
+                                                    <Link
+                                                        href={route('orders.review', order.id)}
+                                                        className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl border-2 border-emerald-900 shadow-[3px_3px_0px_0px_rgba(6,78,59,1)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all text-sm"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                                         Accept & Rate (Done)
-                                                    </PrimaryButton>
+                                                    </Link>
                                                 </div>
                                             )}
 
