@@ -8,6 +8,7 @@ export default function CustomerDashboard({ auth, orders, stats }) {
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
     // Profile Form
+    const { flash } = usePage().props;
     const { data: profileData, setData: setProfileData, patch: patchProfile, processing: profileProcessing, errors: profileErrors, recentlySuccessful: profileSuccessful } = useForm({
         name: user.name,
         email: user.email,
@@ -136,10 +137,10 @@ export default function CustomerDashboard({ auth, orders, stats }) {
                 {/* NOTIFICATIONS */}
                 <div className="mb-8 space-y-4 relative z-10">
                     {/* Flash Message */}
-                    {usePage().props.flash?.message && (
+                    {flash?.message && (
                         <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-r shadow-sm">
                             <p className="font-bold">Notification</p>
-                            <p className="text-sm">{usePage().props.flash.message}</p>
+                            <p className="text-sm">{flash.message}</p>
                         </div>
                     )}
 
