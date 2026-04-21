@@ -7,6 +7,23 @@ export default function CustomerDashboard({ auth, orders, stats }) {
     const [activeTab, setActiveTab] = useState('overview');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+    // Close mobile sidebar when resizing to desktop to prevent overlay from persisting
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setIsMobileSidebarOpen(false);
+            }
+        };
+        window.addEventListener('resize', handleResize);
+        handleResize(); // run on mount too
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // Normalize orders to always be a plain array
+    const orderList = Array.isArray(orders)
+        ? orders
+        : (Array.isArray(orders?.data) ? orders.data : []);
+
     // Profile Form
     const { flash } = usePage().props;
     const { data: profileData, setData: setProfileData, patch: patchProfile, processing: profileProcessing, errors: profileErrors, recentlySuccessful: profileSuccessful } = useForm({
@@ -59,11 +76,12 @@ export default function CustomerDashboard({ auth, orders, stats }) {
     return (
         <div className="min-h-screen flex font-sans selection:bg-yellow-400 selection:text-black bg-[#F3F3F1]">
 
-            {/* Sidebar Overlay */}
+            {/* Sidebar Overlay — only rendered on mobile when sidebar is open */}
             {isMobileSidebarOpen && (
                 <div
-                    className="fixed inset-0 z-30 bg-black/50 lg:hidden backdrop-blur-sm transition-opacity"
+                    className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm transition-opacity lg:hidden"
                     onClick={() => setIsMobileSidebarOpen(false)}
+                    aria-hidden="true"
                 />
             )}
 
@@ -146,29 +164,25 @@ export default function CustomerDashboard({ auth, orders, stats }) {
 
                     {/* Completed Order Notification */}
                     {(() => {
-                        const orderList = orders.data || orders;
-                        if (Array.isArray(orderList)) {
-                            const newCompleted = orderList.filter(o => o.status === 'completed' && !dismissedIds.includes(o.id));
-
-                            if (newCompleted.length > 0) {
-                                return (
-                                    <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-r shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                        <div>
-                                            <p className="font-bold flex items-center gap-2">
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                Order Completed!
-                                            </p>
-                                            <p className="text-sm">You have {newCompleted.length} completed order(s). Check them now!</p>
-                                        </div>
-                                        <button
-                                            onClick={() => handleViewOrders(newCompleted.map(o => o.id))}
-                                            className="whitespace-nowrap px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-green-700 transition"
-                                        >
-                                            Lihat Order
-                                        </button>
+                        const newCompleted = orderList.filter(o => o.status === 'completed' && !dismissedIds.includes(o.id));
+                        if (newCompleted.length > 0) {
+                            return (
+                                <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-r shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                    <div>
+                                        <p className="font-bold flex items-center gap-2">
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            Order Completed!
+                                        </p>
+                                        <p className="text-sm">You have {newCompleted.length} completed order(s). Check them now!</p>
                                     </div>
-                                );
-                            }
+                                    <button
+                                        onClick={() => handleViewOrders(newCompleted.map(o => o.id))}
+                                        className="whitespace-nowrap px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-green-700 transition"
+                                    >
+                                        Lihat Order
+                                    </button>
+                                </div>
+                            );
                         }
                     })()}
                 </div>
@@ -177,25 +191,31 @@ export default function CustomerDashboard({ auth, orders, stats }) {
                 {activeTab === 'overview' && (
                     <div className="space-y-10 animate-fade-in-up relative z-10">
                         {/* ACTION NEEDED BANNER */}
-                        {orders.some(o => o.status === 'review' || (o.milestones && o.milestones.some(m => ['submitted', 'customer_review'].includes(m.status)))) && (
-                            <div className="bg-purple-100 border-2 border-purple-600 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between shadow-[6px_6px_0px_0px_rgba(147,51,234,1)]">
-                                <div className="flex items-center gap-4 mb-4 md:mb-0">
-                                    <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white font-black text-2xl animate-pulse">
-                                        !
+                        {(() => {
+                            const reviewOrder = orderList.find(
+                                o => o.status === 'review' ||
+                                (o.milestones && o.milestones.some(m => ['submitted', 'customer_review'].includes(m.status)))
+                            );
+                            return reviewOrder ? (
+                                <div className="bg-purple-100 border-2 border-purple-600 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between shadow-[6px_6px_0px_0px_rgba(147,51,234,1)]">
+                                    <div className="flex items-center gap-4 mb-4 md:mb-0">
+                                        <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white font-black text-2xl animate-pulse">
+                                            !
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-black text-purple-900">Review Diperlukan!</h3>
+                                            <p className="text-purple-700 font-medium">Ada pekerjaan (Revisi/Milestone) yang menunggu review Anda.</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-xl font-black text-purple-900">Review Diperlukan!</h3>
-                                        <p className="text-purple-700 font-medium">Ada pekerjaan (Revisi/Milestone) yang menunggu review Anda.</p>
-                                    </div>
+                                    <Link
+                                        href={route('orders.review', reviewOrder.id)}
+                                        className="px-6 py-3 bg-purple-600 text-white font-bold rounded-xl border-2 border-purple-900 hover:bg-purple-700 transition shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]"
+                                    >
+                                        Review Sekarang &rarr;
+                                    </Link>
                                 </div>
-                                <Link
-                                    href={route('orders.review', orders.find(o => o.status === 'review' || (o.milestones && o.milestones.some(m => ['submitted', 'customer_review'].includes(m.status)))).id)}
-                                    className="px-6 py-3 bg-purple-600 text-white font-bold rounded-xl border-2 border-purple-900 hover:bg-purple-700 transition shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]"
-                                >
-                                    Review Sekarang &rarr;
-                                </Link>
-                            </div>
-                        )}
+                            ) : null;
+                        })()}
 
                         {/* Stats Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -254,7 +274,7 @@ export default function CustomerDashboard({ auth, orders, stats }) {
                 {/* ORDERS CONTENT */}
                 {activeTab === 'orders' && (
                     <div className="bg-white rounded-[2rem] border-2 border-slate-900 overflow-hidden shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] animate-fade-in-up">
-                        {orders.length === 0 ? (
+                        {orderList.length === 0 ? (
                             <div className="p-20 text-center">
                                 <div className="w-24 h-24 rounded-full bg-slate-100 border-2 border-slate-900 flex items-center justify-center mx-auto mb-6">
                                     <Asterisk className="w-12 h-12 text-slate-400" />
@@ -269,7 +289,7 @@ export default function CustomerDashboard({ auth, orders, stats }) {
                             <>
                                 {/* Mobile Card View */}
                                 <div className="md:hidden">
-                                    {orders.map((order) => (
+                                    {orderList.map((order) => (
                                         <div key={order.id} className="p-6 border-b-2 border-slate-100 last:border-b-0">
                                             <div className="flex justify-between items-start mb-4">
                                                 <div>
@@ -351,7 +371,7 @@ export default function CustomerDashboard({ auth, orders, stats }) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y-2 divide-slate-100">
-                                            {orders.map((order) => (
+                                            {orderList.map((order) => (
                                                 <tr key={order.id} className="hover:bg-slate-50 transition-colors">
                                                     <td className="px-8 py-5 font-mono font-bold text-slate-900">#{order.order_number}</td>
                                                     <td className="px-8 py-5">
