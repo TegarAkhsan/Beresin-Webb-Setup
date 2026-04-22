@@ -43,6 +43,7 @@ export default defineConfig({
             },
             workbox: {
                 // Workbox options for push notifications
+                navigateFallback: null,
                 cleanupOutdatedCaches: true,
                 skipWaiting: true,
                 clientsClaim: true,
