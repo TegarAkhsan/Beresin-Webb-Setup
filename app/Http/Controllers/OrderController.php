@@ -372,6 +372,7 @@ class OrderController extends Controller
             }
             // Add fee for additional revision
             $order->increment('additional_revision_fee', 20000);
+            $order->update(['additional_payment_status' => 'unpaid']);
         }
 
         $request->validate([
