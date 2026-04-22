@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useForm, usePage } from '@inertiajs/react';
 import Asterisk from '@/Components/Landing/Asterisk';
+import InvoiceModal from '@/Components/InvoiceModal';
 
 export default function CustomerDashboard({ auth, orders, stats }) {
     const user = auth.user;
     const [activeTab, setActiveTab] = useState('overview');
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+    const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState(null);
 
     // Close mobile sidebar when resizing to desktop to prevent overlay from persisting
     useEffect(() => {
@@ -323,9 +325,9 @@ export default function CustomerDashboard({ auth, orders, stats }) {
                                                 </div>
                                                 <div className="flex flex-col items-end gap-2">
                                                     <div className="flex gap-2">
-                                                        <a href={route('orders.invoice', order.id)} target="_blank" className="p-2 border-2 border-slate-900 rounded-lg text-slate-900 hover:bg-slate-900 hover:text-white transition group">
+                                                        <button type="button" onClick={() => setSelectedInvoiceOrder(order)} className="p-2 border-2 border-slate-900 rounded-lg text-slate-900 hover:bg-slate-900 hover:text-white transition group">
                                                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                                                        </a>
+                                                        </button>
                                                         <Link href={route('orders.show', order.id)} className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition">
                                                             Detail
                                                         </Link>
@@ -393,9 +395,9 @@ export default function CustomerDashboard({ auth, orders, stats }) {
                                                         Rp {new Intl.NumberFormat('id-ID').format(order.amount)}
                                                     </td>
                                                     <td className="px-8 py-5">
-                                                        <a href={route('orders.invoice', order.id)} target="_blank" className="inline-flex items-center px-3 py-1 border-2 border-slate-900 rounded-lg text-xs font-bold hover:bg-slate-900 hover:text-white transition">
+                                                        <button type="button" onClick={() => setSelectedInvoiceOrder(order)} className="inline-flex items-center px-3 py-1 border-2 border-slate-900 rounded-lg text-xs font-bold hover:bg-slate-900 hover:text-white transition">
                                                             PDF
-                                                        </a>
+                                                        </button>
                                                     </td>
                                                     <td className="px-8 py-5">
                                                         <div className="flex items-center space-x-3">
@@ -524,6 +526,12 @@ export default function CustomerDashboard({ auth, orders, stats }) {
                     animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 }
             `}</style>
+
+            <InvoiceModal 
+                isOpen={!!selectedInvoiceOrder} 
+                onClose={() => setSelectedInvoiceOrder(null)} 
+                order={selectedInvoiceOrder} 
+            />
         </div>
     );
 }
