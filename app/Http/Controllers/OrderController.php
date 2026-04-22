@@ -197,8 +197,12 @@ class OrderController extends Controller
 
         $order->load(['package.service', 'joki', 'user', 'files', 'milestones']);
 
+        $settings = \App\Models\Setting::whereIn('key', ['whatsapp_number', 'qris_image'])->pluck('value', 'key');
+
         return Inertia::render('Orders/Review', [
             'order' => $order,
+            'whatsapp_number' => $settings['whatsapp_number'] ?? null,
+            'qris_image' => $settings['qris_image'] ?? null,
         ]);
     }
 
@@ -442,9 +446,9 @@ class OrderController extends Controller
             'additional_payment_status' => 'pending',
         ]);
 
-        // Optional: Send notification to admin (TODO)
+        // Send notification to admin (Revision Charge Approval)
         $admins = \App\Models\User::where('role', 'admin')->get();
-        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\NewOrderNotification($order));
+        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\RevisionPaymentNotification($order));
 
         return back()->with('message', 'Bukti pembayaran tambahan berhasil diupload. Mohon tunggu konfirmasi admin.');
     }

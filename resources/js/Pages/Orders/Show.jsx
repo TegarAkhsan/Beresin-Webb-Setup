@@ -565,10 +565,38 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                                             </div>
                                                         ) : (
                                                             <div className="bg-white p-4 rounded-lg text-left">
-                                                                <p className="text-sm font-bold text-gray-700 mb-2 block">Metode Pembayaran:</p>
-                                                                <div className="text-sm text-gray-600 mb-4 bg-gray-50 p-2 rounded border">
-                                                                    <p><strong>BCA:</strong> 8801234567890 (Beresin Admin)</p>
-                                                                    <p><strong>QRIS:</strong> Scan QR code pada menu pembayaran awal.</p>
+                                                                <div className="text-sm text-gray-600 mb-4 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-inner">
+                                                                    <div className="mb-4 text-center">
+                                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Pilihan 1: QRIS</p>
+                                                                        {qris_image ? (
+                                                                            <div className="bg-white p-2 inline-block rounded-xl border-2 border-slate-900 mb-2">
+                                                                                <img src={`/storage/${qris_image}`} alt="QRIS" className="w-32 h-auto mx-auto" />
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="w-32 h-32 bg-gray-200 rounded-lg mx-auto flex items-center justify-center mb-2">
+                                                                                <span className="text-[10px] text-gray-400 font-bold uppercase">No QRIS</span>
+                                                                            </div>
+                                                                        )}
+                                                                        <p className="text-[10px] font-bold text-gray-800">SCAN UNTUK BAYAR</p>
+                                                                    </div>
+
+                                                                    <div className="pt-4 border-t border-dashed border-gray-300">
+                                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center">Pilihan 2: Transfer Bank</p>
+                                                                        <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border">
+                                                                            <div>
+                                                                                <p className="text-[10px] font-black text-blue-600">BCA (VA)</p>
+                                                                                <p className="font-mono font-bold text-gray-800">8801234567890</p>
+                                                                            </div>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => { navigator.clipboard.writeText('8801234567890'); alert('Copied!'); }}
+                                                                                className="text-[10px] font-black text-gray-400 hover:text-gray-900 border border-gray-200 px-2 py-1 rounded"
+                                                                            >
+                                                                                COPY
+                                                                            </button>
+                                                                        </div>
+                                                                        <p className="text-[10px] text-gray-400 mt-1 text-center font-bold">a.n. Beresin Admin</p>
+                                                                    </div>
                                                                 </div>
 
                                                                 <form onSubmit={(e) => {
