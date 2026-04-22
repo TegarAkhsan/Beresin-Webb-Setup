@@ -422,7 +422,7 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                         <div className="space-y-6">
                             {(order.status === 'review' || pendingMilestone) ? (
                                 <div className="bg-white rounded-[2rem] p-6 border-2 border-slate-900 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                                    <h3 className="font-black text-2xl text-slate-900 mb-6">Action Needed</h3>
+                                    <h3 className="font-black text-2xl text-slate-900 mb-6">Action Needed (V2)</h3>
 
                                     {/* Milestone Progress Info */}
                                     {order.milestones && order.milestones.length > 0 && (() => {
