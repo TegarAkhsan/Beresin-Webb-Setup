@@ -662,8 +662,12 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                                 paid_revision: isPaid
                             },
                             onSuccess: () => {
-                                setModalType(null);
                                 resetRevision();
+                                if (isPaid) {
+                                    setModalType('payment');
+                                } else {
+                                    setModalType(null);
+                                }
                             },
                         });
                     }}>
@@ -696,7 +700,7 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                                 disabled={revisionProcessing}
                                 className={`px-6 py-3 font-bold rounded-lg transition text-white ${order.revision_count >= (order.package?.max_revisions || 3) ? 'bg-orange-600 hover:bg-orange-700' : 'bg-slate-900 hover:bg-slate-700'}`}
                             >
-                                {order.revision_count >= (order.package?.max_revisions || 3) ? 'Setuju & Bayar Revisi' : 'Kirim Revisi'}
+                                {order.revision_count >= (order.package?.max_revisions || 3) ? 'Setuju' : 'Kirim Revisi'}
                             </button>
                         </div>
                     </form>
