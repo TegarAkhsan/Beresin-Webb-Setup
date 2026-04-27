@@ -40,8 +40,16 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
     const [showPaymentBanner, setShowPaymentBanner] = useState(true);
 
     // Check if customer has unpaid extra revision fees
-    const hasUnpaidRevisionFee = order.additional_revision_fee > 0 && order.additional_payment_status !== 'paid';
-    const extraRevisionCount = order.additional_revision_fee > 0 ? Math.round(order.additional_revision_fee / 20000) : 0;
+    // Dual condition: fee-based OR revision_count-based (handles edge case where fee wasn't set correctly)
+    const maxRevisions = order.package?.max_revisions || 3;
+    const extraRevisionCount = Math.max(
+        order.additional_revision_fee > 0 ? Math.round(order.additional_revision_fee / 20000) : 0,
+        order.revision_count > maxRevisions ? (order.revision_count - maxRevisions) : 0
+    );
+    const hasUnpaidRevisionFee = (
+        (order.additional_revision_fee > 0 || order.revision_count > maxRevisions)
+        && order.additional_payment_status !== 'paid'
+    );
 
     // Error flash from server-side payment gate
     const pageProps = usePage().props;

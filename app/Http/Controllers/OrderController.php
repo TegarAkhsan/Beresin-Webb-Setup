@@ -293,9 +293,28 @@ class OrderController extends Controller
         }
 
         // Payment gate: block acceptance if there are unpaid extra revision fees
-        if ($order->additional_revision_fee > 0 && $order->additional_payment_status !== 'paid') {
-            return back()->with('error', 'Anda memiliki tagihan revisi tambahan sebesar Rp ' . number_format($order->additional_revision_fee, 0, ',', '.') . ' yang belum dilunasi. Harap selesaikan pembayaran terlebih dahulu sebelum menerima hasil.');
+        // Dual check: fee-based OR revision_count-based (handles edge case where fee wasn't incremented)
+        $order->load('package');
+        $maxRevisions = $order->package->max_revisions ?? 3;
+        $hasExtraRevisions = $order->revision_count > $maxRevisions;
+
+        // Auto-fix: jika revision_count sudah melebihi batas tapi fee belum di-set (edge case dari bug lama)
+        if ($hasExtraRevisions && $order->additional_revision_fee == 0) {
+            $extraCount = $order->revision_count - $maxRevisions;
+            $order->update([
+                'additional_revision_fee' => $extraCount * 20000,
+                'additional_payment_status' => 'unpaid',
+            ]);
+            $order->refresh();
         }
+
+        if (($order->additional_revision_fee > 0 || $hasExtraRevisions) && $order->additional_payment_status !== 'paid') {
+            $fee = $order->additional_revision_fee > 0
+                ? $order->additional_revision_fee
+                : (($order->revision_count - $maxRevisions) * 20000);
+            return back()->with('error', 'Anda memiliki tagihan revisi tambahan sebesar Rp ' . number_format($fee, 0, ',', '.') . ' yang belum dilunasi. Harap selesaikan pembayaran terlebih dahulu sebelum menerima hasil.');
+        }
+
 
         $validated = $request->validate([
             'rating' => 'required|integer|min:1|max:5',
@@ -366,7 +385,15 @@ class OrderController extends Controller
 
         $order->load('package');
 
-        if ($order->revision_count >= $order->package->max_revisions) {
+        // Validasi dulu sebelum mengubah data apapun
+        $request->validate([
+            'reason' => 'required|string|max:1000',
+            'revision_file' => 'nullable|file|max:5120' // 5MB
+        ]);
+
+        $isExtraRevision = $order->revision_count >= $order->package->max_revisions;
+
+        if ($isExtraRevision) {
             if (!$request->boolean('paid_revision')) {
                 return back()->with('error', 'Anda telah menggunakan seluruh jatah revisinya.');
             }
@@ -374,11 +401,6 @@ class OrderController extends Controller
             $order->increment('additional_revision_fee', 20000);
             $order->update(['additional_payment_status' => 'unpaid']);
         }
-
-        $request->validate([
-            'reason' => 'required|string|max:1000',
-            'revision_file' => 'nullable|file|max:5120' // 5MB
-        ]);
 
         $path = null;
         if ($request->hasFile('revision_file')) {
