@@ -63,9 +63,10 @@ export default function Dashboard({ auth, stats = {}, joki_workload = [], payout
             <Head title="Admin Dashboard" />
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
                 <StatCard title="Gross Revenue" value={`Rp ${new Intl.NumberFormat('id-ID').format(stats?.revenue_gross || 0)}`} subtitle="Lifetime Total" color="blue" />
-                <StatCard title="Ops Fund" value={`Rp ${new Intl.NumberFormat('id-ID').format(stats?.revenue_ops || 0)}`} subtitle="Operational" color="amber" />
+                <StatCard title="Admin Revenue" value={`Rp ${new Intl.NumberFormat('id-ID').format(stats?.revenue_admin || 0)}`} subtitle="20% Profit Share" color="purple" />
+                <StatCard title="Ops Fund" value={`Rp ${new Intl.NumberFormat('id-ID').format(stats?.revenue_ops || 0)}`} subtitle="Operational & Fee" color="amber" />
                 <StatCard title="Active Jokis" value={stats?.total_jokis || 0} subtitle="Staff Count" color="purple" />
                 <StatCard title="Total Orders" value={stats?.total_orders || 0} subtitle="Lifetime" color="emerald" />
             </div>

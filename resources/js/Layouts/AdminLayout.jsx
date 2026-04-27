@@ -26,7 +26,7 @@ export default function AdminLayout({ user, header, children }) {
         const checkUnread = async () => {
             try {
                 const response = await axios.get(route('notifications.check'));
-                const { unread_chats, pending_orders } = response.data;
+                const { unread_chats, verify_orders, pending_payouts, pending_assignments } = response.data;
 
                 // 1. Chat Notification
                 setUnreadCount(prev => {
@@ -38,15 +38,19 @@ export default function AdminLayout({ user, header, children }) {
                     return unread_chats;
                 });
 
-                // 2. Order Notification
-                setPendingOrdersCount(prev => {
-                    if (pending_orders > prev) {
+                // 2. Order Notification (Verify Orders)
+                setVerifyOrdersCount(prev => {
+                    if (verify_orders > prev) {
                         if (audioRef.current) audioRef.current.play().catch(e => console.log('Audio autoplay blocked', e));
                         setShowOrderToast(true);
                         setTimeout(() => setShowOrderToast(false), 5000);
                     }
-                    return pending_orders;
+                    return verify_orders;
                 });
+
+                // 3. Other Admin specific counts
+                setPendingPayoutsCount(pending_payouts || 0);
+                setPendingAssignmentsCount(pending_assignments || 0);
 
             } catch (error) {
                 console.error('Polling error', error);
@@ -63,13 +67,13 @@ export default function AdminLayout({ user, header, children }) {
     }, []);
 
     const navigation = [
-        { name: 'Dashboard', href: '/admin', active: route().current('admin.dashboard') },
+        { name: 'Dashboard', href: '/admin', active: route().current('admin.dashboard'), badge: pendingPayoutsCount },
         { name: 'Earnings', href: route('admin.earnings'), active: route().current('admin.earnings') },
         { name: 'Users', href: route('admin.users.index'), active: route().current('admin.users.*') },
         { name: 'Services', href: route('admin.services.index'), active: route().current('admin.services.*') },
-        { name: 'Assign Task', href: route('admin.orders.assign'), active: route().current('admin.orders.assign') },
+        { name: 'Assign Task', href: route('admin.orders.assign'), active: route().current('admin.orders.assign'), badge: pendingAssignmentsCount },
         { name: 'Chats', href: route('admin.chat.index'), active: route().current('admin.chat.*'), badge: unreadCount },
-        { name: 'Verify Orders', href: route('admin.orders.verify'), active: route().current('admin.orders.verify'), badge: pendingOrdersCount },
+        { name: 'Verify Orders', href: route('admin.orders.verify'), active: route().current('admin.verify.*') || route().current('admin.orders.verify'), badge: verifyOrdersCount },
         { name: 'Transactions', href: route('admin.transactions.index'), active: route().current('admin.transactions.*') },
         { name: 'Settings', href: route('admin.settings.index'), active: route().current('admin.settings.*') },
     ];

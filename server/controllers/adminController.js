@@ -5,11 +5,12 @@ import bcrypt from 'bcryptjs';
 const generateInvoiceNumber = () => 'INV-' + Math.random().toString(36).substring(2, 12).toUpperCase();
  
 const calculateJokiCommission = (order) => {
-    const baseShare = Number(order.base_price || 0) * 0.65;
+    const baseShare = Number(order.base_price || 0) * 0.75;
     const rushShare = Number(order.rush_fee || 0) * 0.80;
-    const additionalShare = Number(order.additional_revision_fee || 0) * 0.65;
+    const additionalShare = Number(order.additional_revision_fee || 0) * 1.0;
     return baseShare + rushShare + additionalShare;
 };
+
 
 
 const flashRedirect = (res, url, message, isError = false) => {
@@ -65,12 +66,29 @@ export const index = async (req, res) => {
         ]);
 
         const revenueGross = completedOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
-        const revenueOps = completedOrders.reduce((sum, o) => sum + (Number(o.amount || 0) - Number(o.joki_fee || 0)), 0);
+        
+        let totalAdmin = 0;
+        let totalOps = 0;
+        completedOrders.forEach(o => {
+            const base = Number(o.base_price || 0);
+            const rush = Number(o.rush_fee || 0);
+            const platform = Number(o.platform_fee || 0);
+            
+            totalAdmin += (base * 0.20) + (rush * 0.20);
+            totalOps += (base * 0.05) + platform;
+        });
         const jokiWorkload = jokisRaw.map(j => ({ ...j, active_jobs_count: j._count.orders_orders_joki_idTousers }))
             .sort((a, b) => b.active_jobs_count - a.active_jobs_count);
 
         res.inertia('Admin/Dashboard', {
-            stats: { total_orders: totalOrders, active_orders: activeOrders, revenue_gross: revenueGross, revenue_ops: revenueOps, total_jokis: totalJokis },
+            stats: { 
+                total_orders: totalOrders, 
+                active_orders: activeOrders, 
+                revenue_gross: revenueGross, 
+                revenue_ops: totalOps, 
+                revenue_admin: totalAdmin,
+                total_jokis: totalJokis 
+            },
             joki_workload: jokiWorkload,
             payoutRequests: payoutRequestsRaw.map(p => ({
                 ...p,
@@ -231,7 +249,7 @@ export const storeAssignment = async (req, res) => {
             targetJokiId = leastBusyJoki.id;
         }
 
-        const jokiFee = (Number(order.base_price) * 0.65) + (Number(order.rush_fee) * 0.80);
+        const jokiFee = (Number(order.base_price) * 0.75) + (Number(order.rush_fee) * 0.80);
         await prisma.orders.update({
             where: { id: order.id },
             data: { joki_id: parseInt(targetJokiId), joki_fee: jokiFee, status: 'in_progress', started_at: new Date(), updated_at: new Date() }
@@ -298,7 +316,7 @@ export const approveAdditionalPayment = async (req, res) => {
         if (!order) return flashRedirect(res, '/admin/orders/verify', 'Order tidak ditemukan', true);
 
         const additionalFee = Number(order.additional_revision_fee || 0);
-        const jokiAdditionalShare = additionalFee * 0.65;
+        const jokiAdditionalShare = additionalFee * 1.0; // 100% to joki
 
         await prisma.orders.update({
             where: { id: parseInt(id) },
@@ -334,7 +352,7 @@ export const batchAutoAssign = async (req, res) => {
 
             if (!leastBusyJoki) break;
 
-            const jokiFee = (Number(order.base_price) * 0.65) + (Number(order.rush_fee) * 0.80);
+            const jokiFee = (Number(order.base_price) * 0.75) + (Number(order.rush_fee) * 0.80);
             await prisma.orders.update({
                 where: { id: order.id },
                 data: { joki_id: leastBusyJoki.id, joki_fee: jokiFee, status: 'in_progress', started_at: new Date(), updated_at: new Date() }

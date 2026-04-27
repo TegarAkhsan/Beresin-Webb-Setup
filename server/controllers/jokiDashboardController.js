@@ -2,9 +2,9 @@ import { prisma } from '../app.js';
 import { uploadToStorage } from '../lib/storage.js';
 
 const calculateJokiCommission = (order) => {
-    const baseShare = Number(order.base_price || 0) * 0.65;
+    const baseShare = Number(order.base_price || 0) * 0.75;
     const rushShare = Number(order.rush_fee || 0) * 0.80;
-    const additionalShare = Number(order.additional_revision_fee || 0) * 0.65;
+    const additionalShare = Number(order.additional_revision_fee || 0) * 1.0;
     return baseShare + rushShare + additionalShare;
 };
 

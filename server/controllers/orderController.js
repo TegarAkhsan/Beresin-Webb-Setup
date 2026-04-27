@@ -510,30 +510,107 @@ export const downloadInvoice = async (req, res) => {
         const pkg = order.packages;
         const html = `
 <!DOCTYPE html>
-<html>
-<head><title>Invoice ${order.order_number}</title>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
-  h1 { color: #1e293b; } table { width: 100%; border-collapse: collapse; }
-  td, th { padding: 10px; border: 1px solid #e2e8f0; text-align: left; }
-  th { background: #f8fafc; } .total { font-weight: bold; font-size: 1.2em; }
-</style></head>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <title>Invoice ${order.order_number}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body { font-family: 'Inter', sans-serif; color: #1f2937; line-height: 1.5; margin: 0; padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 60px; }
+        .brand { font-size: 32px; font-weight: 800; color: #111827; }
+        .brand span { color: #4f46e5; }
+        .invoice-title { font-size: 24px; font-weight: 700; color: #374151; margin: 0; }
+        .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
+        .meta-box h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 8px; }
+        .meta-box p { font-size: 14px; margin: 0; font-weight: 500; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+        th { text-align: left; font-size: 12px; text-transform: uppercase; color: #6b7280; padding: 12px 0; border-bottom: 2px solid #f3f4f6; }
+        td { padding: 20px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+        .item-name { font-weight: 700; color: #111827; }
+        .item-desc { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .summary { display: flex; justify-content: flex-end; }
+        .summary-box { width: 250px; }
+        .summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+        .summary-row.total { font-weight: 800; font-size: 18px; color: #111827; border-top: 2px solid #f3f4f6; margin-top: 10px; padding-top: 15px; }
+        .footer { margin-top: 80px; text-align: center; font-size: 12px; color: #9ca3af; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+        .status-paid { background: #d1fae5; color: #065f46; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+    </style>
+</head>
 <body>
-<h1>INVOICE</h1>
-<p><strong>Order Number:</strong> ${order.order_number}</p>
-<p><strong>Date:</strong> ${new Date(order.created_at).toLocaleDateString('id-ID')}</p>
-<p><strong>Customer:</strong> ${user?.name || '-'} (${user?.email || '-'})</p>
-<hr/>
-<table>
-  <tr><th>Service</th><th>Package</th><th>Amount</th></tr>
-  <tr>
-    <td>${pkg?.services?.name || '-'}</td>
-    <td>${pkg?.name || '-'}</td>
-    <td>Rp ${Number(order.amount).toLocaleString('id-ID')}</td>
-  </tr>
-  <tr class="total"><td colspan="2">Total</td><td>Rp ${Number(order.amount).toLocaleString('id-ID')}</td></tr>
-</table>
-<p>Status: <strong>${order.status.replace(/_/g, ' ').toUpperCase()}</strong></p>
+    <div class="container">
+        <div class="header">
+            <div>
+                <div class="brand">Beresin<span>.</span></div>
+                <p style="font-size: 12px; color: #6b7280; margin: 5px 0;">Professional Assignment & Project Helper</p>
+            </div>
+            <div style="text-align: right;">
+                <h1 class="invoice-title">INVOICE</h1>
+                <p style="font-size: 14px; font-weight: 700; margin: 5px 0;">#${order.order_number}</p>
+                <div class="status-badge ${order.status === 'completed' || order.payment_status === 'paid' ? 'status-paid' : 'status-pending'}">
+                    ${(order.payment_status || order.status).replace(/_/g, ' ')}
+                </div>
+            </div>
+        </div>
+
+        <div class="meta">
+            <div class="meta-box">
+                <h4>Penagihan Untuk</h4>
+                <p>${user?.name || '-'}</p>
+                <p style="color: #6b7280; font-weight: 400;">${user?.email || '-'}</p>
+                <p style="color: #6b7280; font-weight: 400;">${user?.university || '-'}</p>
+            </div>
+            <div class="meta-box">
+                <h4>Detail Invoice</h4>
+                <p>Tanggal: ${new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                <p>Metode: ${order.payment_method?.toUpperCase() || 'QRIS'}</p>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Deskripsi Layanan</th>
+                    <th style="text-align: right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <div class="item-name">${pkg?.services?.name || 'Service'} - ${pkg?.name || 'Package'}</div>
+                        <div class="item-desc">Layanan bantuan pengerjaan tugas/proyek profesional.</div>
+                    </td>
+                    <td style="text-align: right; font-weight: 700;">Rp ${Number(order.amount).toLocaleString('id-ID')}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="summary">
+            <div class="summary-box">
+                <div class="summary-row">
+                    <span>Subtotal</span>
+                    <span>Rp ${Number(order.base_price + (order.rush_fee || 0)).toLocaleString('id-ID')}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Biaya Layanan</span>
+                    <span>Rp ${Number(order.platform_fee || 0).toLocaleString('id-ID')}</span>
+                </div>
+                <div class="summary-row total">
+                    <span>Total</span>
+                    <span>Rp ${Number(order.amount).toLocaleString('id-ID')}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Terima kasih telah mempercayakan tugas Anda kepada Beresin.</p>
+            <p>Jika ada pertanyaan, hubungi kami melalui WhatsApp.</p>
+            <p style="margin-top: 20px;">&copy; ${new Date().getFullYear()} Beresin. All rights reserved.</p>
+        </div>
+    </div>
 </body>
 </html>`;
 

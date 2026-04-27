@@ -165,15 +165,30 @@ app.get('/notifications/check', async (req, res) => {
         }
 
         if (decoded.role === 'admin') {
-            const [unreadChats, pendingOrders] = await Promise.all([
+            const [unreadChats, pendingMainPayments, pendingAdditionalPayments, pendingPayouts, pendingAssignments] = await Promise.all([
                 prisma.chats.count({
                     where: { is_admin_reply: false, is_read: false }
                 }),
                 prisma.orders.count({
                     where: { status: 'pending_payment', payment_proof: { not: null } }
+                }),
+                prisma.orders.count({
+                    where: { additional_payment_status: 'pending_verification' }
+                }),
+                prisma.payout_requests.count({
+                    where: { status: 'pending' }
+                }),
+                prisma.orders.count({
+                    where: { status: 'pending_assignment' }
                 })
             ]);
-            return res.json({ unread_chats: unreadChats, pending_orders: pendingOrders, new_tasks: 0 });
+            return res.json({ 
+                unread_chats: unreadChats, 
+                verify_orders: pendingMainPayments + pendingAdditionalPayments, 
+                pending_payouts: pendingPayouts,
+                pending_assignments: pendingAssignments,
+                new_tasks: 0 
+            });
         }
 
         if (decoded.role === 'joki') {
