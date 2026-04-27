@@ -4,7 +4,22 @@ import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import PrimaryButton from '@/Components/PrimaryButton';
 import InputError from '@/Components/InputError';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+// Helper: returns full URL if already absolute, else prepends /storage/
+const getFileUrl = (path) => {
+    if (!path) return null;
+    if (typeof path !== 'string') return null;
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    
+    // Remove leading slash for consistent processing
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    
+    // If it already has storage/ prefix, just add the leading slash
+    if (cleanPath.startsWith('storage/')) return `/${cleanPath}`;
+    
+    return `/storage/${cleanPath}`;
+};
 
 export default function SettingsIndex({ auth, settings }) {
     const { data, setData, post, processing, errors, recentlySuccessful } = useForm({
@@ -16,11 +31,35 @@ export default function SettingsIndex({ auth, settings }) {
     });
 
     const [activeTab, setActiveTab] = useState('general');
+    const [logoPreview, setLogoPreview] = useState(null);
+    const [qrisPreview, setQrisPreview] = useState(null);
+
+    // Auto-generate Logo Preview
+    useEffect(() => {
+        if (data.invoice_logo instanceof File) {
+            const url = URL.createObjectURL(data.invoice_logo);
+            setLogoPreview(url);
+            return () => URL.revokeObjectURL(url);
+        }
+    }, [data.invoice_logo]);
+
+    // Auto-generate QRIS Preview
+    useEffect(() => {
+        if (data.qris_image instanceof File) {
+            const url = URL.createObjectURL(data.qris_image);
+            setQrisPreview(url);
+            return () => URL.revokeObjectURL(url);
+        }
+    }, [data.qris_image]);
 
     const submit = (e) => {
         e.preventDefault();
         post(route('admin.settings.update'), {
             preserveScroll: true,
+            onSuccess: () => {
+                setLogoPreview(null);
+                setQrisPreview(null);
+            }
         });
     };
 
@@ -159,11 +198,11 @@ export default function SettingsIndex({ auth, settings }) {
                                                 <InputError message={errors.invoice_logo} className="mt-2" />
                                             </div>
 
-                                            {settings.invoice_logo && (
+                                            {(logoPreview || settings.invoice_logo) && (
                                                 <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-                                                    <p className="text-sm text-gray-500 mb-2">Current Logo Preview:</p>
+                                                    <p className="text-sm text-gray-500 mb-2">{logoPreview ? 'New Logo Preview:' : 'Current Logo Preview:'}</p>
                                                     <div className="border p-2 bg-white rounded flex items-center justify-center">
-                                                        <img src={`/storage/${settings.invoice_logo}`} alt="Current Logo" className="h-20 object-contain" />
+                                                        <img src={logoPreview || getFileUrl(settings.invoice_logo)} alt="Logo Preview" className="h-20 object-contain" />
                                                     </div>
                                                 </div>
                                             )}
@@ -201,11 +240,11 @@ export default function SettingsIndex({ auth, settings }) {
                                                 <InputError message={errors.qris_image} className="mt-2" />
                                             </div>
 
-                                            {settings.qris_image && (
+                                            {(qrisPreview || settings.qris_image) && (
                                                 <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-                                                    <p className="text-sm text-gray-500 mb-2">Current QRIS Preview:</p>
+                                                    <p className="text-sm text-gray-500 mb-2">{qrisPreview ? 'New QRIS Preview:' : 'Current QRIS Preview:'}</p>
                                                     <div className="border p-2 bg-white rounded flex items-center justify-center">
-                                                        <img src={`/storage/${settings.qris_image}`} alt="Current QRIS" className="max-w-full h-48 object-contain" />
+                                                        <img src={qrisPreview || getFileUrl(settings.qris_image)} alt="QRIS Preview" className="max-w-full h-48 object-contain" />
                                                     </div>
                                                 </div>
                                             )}
