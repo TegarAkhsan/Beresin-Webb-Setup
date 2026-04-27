@@ -7,13 +7,15 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 
-export default function Earnings({ auth, totalEarnings = 0, revenueAdmin = 0, revenueOps = 0, totalWithdrawn = 0, availableBalance = 0, history = [], bank_details = {} }) {
+export default function Earnings({ auth, totalEarnings = 0, revenueAdmin = 0, revenueOps = 0, totalAdminWithdrawn = 0, totalOpsWithdrawn = 0, availableAdmin = 0, availableOps = 0, history = [], bank_details = {} }) {
     const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+    const [withdrawType, setWithdrawType] = useState('admin'); // 'admin' or 'ops'
  
     // Withdraw Form
     const { data: withdrawData, setData: setWithdrawData, post: postWithdraw, processing: withdrawProcessing, reset: resetWithdraw, errors: withdrawErrors } = useForm({
         amount: '',
-        notes: ''
+        notes: '',
+        type: 'admin'
     });
 
     // Validated Bank Details (for withdraw check)
@@ -25,6 +27,12 @@ export default function Earnings({ auth, totalEarnings = 0, revenueAdmin = 0, re
         account_number: bank_details?.account_number || '',
         account_holder: bank_details?.account_holder || '',
     });
+
+    const openWithdrawModal = (type) => {
+        setWithdrawType(type);
+        setWithdrawData('type', type);
+        setWithdrawModalOpen(true);
+    };
 
     const handleWithdraw = (e) => {
         e.preventDefault();
@@ -40,7 +48,7 @@ export default function Earnings({ auth, totalEarnings = 0, revenueAdmin = 0, re
         e.preventDefault();
         postSettings(route('admin.earnings.settings'));
     };
- 
+
     return (
         <AdminLayout
             user={auth.user}
@@ -51,71 +59,80 @@ export default function Earnings({ auth, totalEarnings = 0, revenueAdmin = 0, re
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
                 {/* 1. FINANCIAL SUMMARY */}
                 <div className="xl:col-span-2 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Admin Profit */}
-                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                            <h2 className="text-gray-500 font-medium uppercase tracking-wider text-[10px] mb-2">Admin Profit (20%)</h2>
-                            <div className="text-2xl font-bold text-gray-900">
-                                <span className="text-sm opacity-60 mr-1">Rp</span>
-                                {new Intl.NumberFormat('id-ID').format(revenueAdmin)}
-                            </div>
-                        </div>
-
-                        {/* Ops Fund */}
-                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                            <h2 className="text-gray-500 font-medium uppercase tracking-wider text-[10px] mb-2">Ops Fund (5% + Fee)</h2>
-                            <div className="text-2xl font-bold text-gray-900">
-                                <span className="text-sm opacity-60 mr-1">Rp</span>
-                                {new Intl.NumberFormat('id-ID').format(revenueOps)}
-                            </div>
-                        </div>
-
-                        {/* Total Platform Revenue */}
-                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                            <h2 className="text-gray-500 font-medium uppercase tracking-wider text-[10px] mb-2">Total Platform Income</h2>
-                            <div className="text-2xl font-bold text-indigo-600">
-                                <span className="text-sm opacity-60 mr-1">Rp</span>
-                                {new Intl.NumberFormat('id-ID').format(totalEarnings)}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Available Balance (Main Withdrawal Card) */}
-                    <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
-                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                            <div>
-                                <h2 className="text-indigo-100 font-medium uppercase tracking-wider text-sm mb-2">Available Balance</h2>
-                                <div className="text-5xl font-bold">
-                                    <span className="text-2xl opacity-80 align-top mr-1">Rp</span>
-                                    {new Intl.NumberFormat('id-ID').format(availableBalance)}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Admin Profit Card */}
+                        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden flex flex-col justify-between h-full">
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start">
+                                    <h2 className="text-indigo-100 font-medium uppercase tracking-wider text-xs mb-2">Available Admin Profit</h2>
+                                    <span className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] font-bold">20% SHARE</span>
                                 </div>
-                                <p className="text-indigo-200 text-sm mt-2 flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                    Ready to withdraw to your bank account
-                                </p>
+                                <div className="text-4xl font-bold mb-4">
+                                    <span className="text-xl opacity-80 align-top mr-1">Rp</span>
+                                    {new Intl.NumberFormat('id-ID').format(availableAdmin)}
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-indigo-200 text-xs">Total Earned: Rp {new Intl.NumberFormat('id-ID').format(revenueAdmin)}</p>
+                                    <p className="text-indigo-200 text-xs">Total Withdrawn: Rp {new Intl.NumberFormat('id-ID').format(totalAdminWithdrawn)}</p>
+                                </div>
                             </div>
                             
-                            <div className="min-w-[200px]">
+                            <div className="relative z-10 mt-8">
                                 <button
-                                    onClick={() => setWithdrawModalOpen(true)}
-                                    disabled={!hasBankDetails}
-                                    className={`w-full py-4 rounded-2xl font-bold shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 ${hasBankDetails
+                                    onClick={() => openWithdrawModal('admin')}
+                                    disabled={!hasBankDetails || availableAdmin < 10000}
+                                    className={`w-full py-3.5 rounded-2xl font-bold shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 ${hasBankDetails && availableAdmin >= 10000
                                         ? 'bg-white text-indigo-700 hover:bg-indigo-50'
                                         : 'bg-white/10 text-white/40 cursor-not-allowed border border-white/10'
                                         }`}
                                 >
-                                    {hasBankDetails ? (
-                                        <>
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            Withdraw Funds
-                                        </>
-                                    ) : 'Complete Settings First'}
+                                    Withdraw Profit
+                                </button>
+                            </div>
+                            {/* Decorative */}
+                            <div className="absolute top-0 right-0 -mt-8 -mr-8 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
+                        </div>
+
+                        {/* Ops Fund Card */}
+                        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm flex flex-col justify-between h-full relative overflow-hidden">
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start">
+                                    <h2 className="text-gray-400 font-medium uppercase tracking-wider text-xs mb-2">Ops Fund Balance</h2>
+                                    <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-500 text-[10px] font-bold">5% + PLATFORM FEE</span>
+                                </div>
+                                <div className="text-4xl font-bold text-gray-900 mb-4">
+                                    <span className="text-xl opacity-40 align-top mr-1 text-gray-400 font-normal">Rp</span>
+                                    {new Intl.NumberFormat('id-ID').format(availableOps)}
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-gray-400 text-xs font-medium">Total Earned: Rp {new Intl.NumberFormat('id-ID').format(revenueOps)}</p>
+                                    <p className="text-gray-400 text-xs font-medium">Total Withdrawn: Rp {new Intl.NumberFormat('id-ID').format(totalOpsWithdrawn)}</p>
+                                </div>
+                            </div>
+                            
+                            <div className="relative z-10 mt-8">
+                                <button
+                                    onClick={() => openWithdrawModal('ops')}
+                                    disabled={!hasBankDetails || availableOps < 10000}
+                                    className={`w-full py-3.5 rounded-2xl font-bold transition-all transform active:scale-95 flex items-center justify-center gap-2 ${hasBankDetails && availableOps >= 10000
+                                        ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100 shadow-lg'
+                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        }`}
+                                >
+                                    Withdraw Ops Fund
                                 </button>
                             </div>
                         </div>
-                        {/* Decorative Patterns */}
-                        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
-                        <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-indigo-400/20 rounded-full blur-2xl"></div>
+                    </div>
+
+                    <div className="bg-indigo-50/50 rounded-2xl p-4 border border-indigo-100 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                        </div>
+                        <div>
+                            <p className="text-xs text-indigo-400 font-bold uppercase tracking-widest">Total Platform Net</p>
+                            <p className="text-xl font-bold text-indigo-900">Rp {new Intl.NumberFormat('id-ID').format(totalEarnings)}</p>
+                        </div>
                     </div>
                 </div>
 
@@ -254,18 +271,21 @@ export default function Earnings({ auth, totalEarnings = 0, revenueAdmin = 0, re
             {/* WITHDRAW MODAL */}
             <Modal show={withdrawModalOpen} onClose={() => setWithdrawModalOpen(false)}>
                 <form onSubmit={handleWithdraw} className="p-6">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">Withdraw Funds</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-1">Withdraw {withdrawType === 'ops' ? 'Ops Fund' : 'Admin Profit'}</h2>
+                    <p className="text-sm text-gray-500 mb-6">Penarikan dana dari saldo {withdrawType === 'ops' ? 'operasional platform' : 'keuntungan admin'}.</p>
 
-                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-6">
-                        <p className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2">Transfer Destination</p>
-                        <p className="font-bold text-gray-900 text-lg">{settingsData.bank_name}</p>
-                        <p className="text-gray-600">{settingsData.account_number}</p>
-                        <p className="text-gray-500 text-sm mt-1">{settingsData.account_holder}</p>
-                        <p className="text-xs text-indigo-400 mt-2 italic">Ensure these details are correct in 'Payout Settings' before withdrawing.</p>
+                    <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 mb-6 relative overflow-hidden">
+                        <div className="relative z-10">
+                            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-2">Transfer Destination</p>
+                            <p className="font-bold text-gray-900 text-lg">{settingsData.bank_name || '-'}</p>
+                            <p className="text-gray-600 font-medium tracking-wider">{settingsData.account_number || '-'}</p>
+                            <p className="text-gray-500 text-sm mt-1">{settingsData.account_holder || '-'}</p>
+                        </div>
+                        <svg className="absolute -right-4 -bottom-4 w-24 h-24 text-indigo-500/5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2h4a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a1 1 0 100-2 1 1 0 000 2zM2 12a2 2 0 002 2h4a2 2 0 002-2v-4a2 2 0 00-2-2H4a2 2 0 00-2 2v4zm10-4a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V8zm2 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
                     </div>
 
                     <div className="mb-4">
-                        <InputLabel value="Amount (Rp)" />
+                        <InputLabel value={`Amount (Max: Rp ${new Intl.NumberFormat('id-ID').format(withdrawType === 'ops' ? availableOps : availableAdmin)})`} />
                         <TextInput
                             type="number"
                             className="w-full mt-1"
@@ -283,13 +303,13 @@ export default function Earnings({ auth, totalEarnings = 0, revenueAdmin = 0, re
                             className="w-full mt-1"
                             value={withdrawData.notes}
                             onChange={(e) => setWithdrawData('notes', e.target.value)}
-                            placeholder="e.g. Monthly salary"
+                            placeholder={withdrawType === 'ops' ? 'e.g. Server maintenance' : 'e.g. Monthly profit'}
                         />
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-6">
-                        <SecondaryButton onClick={() => setWithdrawModalOpen(false)}>Cancel</SecondaryButton>
-                        <PrimaryButton disabled={withdrawProcessing}>Confirm Withdraw</PrimaryButton>
+                    <div className="flex justify-end gap-3 mt-8">
+                        <SecondaryButton onClick={() => setWithdrawModalOpen(false)} className="rounded-xl">Cancel</SecondaryButton>
+                        <PrimaryButton disabled={withdrawProcessing} className="rounded-xl px-8">Confirm Withdraw</PrimaryButton>
                     </div>
                 </form>
             </Modal>

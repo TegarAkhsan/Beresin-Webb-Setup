@@ -892,8 +892,14 @@ export const earnings = async (req, res) => {
         const platformRevenue = totalAdmin + totalOps;
 
         const withdrawalRecords = await prisma.admin_withdrawals.findMany({ orderBy: { created_at: 'desc' } });
-        const totalWithdrawn = withdrawalRecords.reduce((sum, w) => sum + Number(w.amount || 0), 0);
- 
+        
+        // Split withdrawals by notes/type (convention: starting with [OPS] or [ADMIN])
+        const adminWithdrawals = withdrawalRecords.filter(w => !w.notes?.startsWith('[OPS]'));
+        const opsWithdrawals = withdrawalRecords.filter(w => w.notes?.startsWith('[OPS]'));
+
+        const totalAdminWithdrawn = adminWithdrawals.reduce((sum, w) => sum + Number(w.amount || 0), 0);
+        const totalOpsWithdrawn = opsWithdrawals.reduce((sum, w) => sum + Number(w.amount || 0), 0);
+
         // Bank details from settings
         const bankSettings = await prisma.settings.findMany({
             where: { key: { in: ['bank_name', 'account_number', 'account_holder'] } }
@@ -920,9 +926,9 @@ export const earnings = async (req, res) => {
             ...withdrawalRecords.map(w => ({
                 id: `withdraw-${w.id}`,
                 date: w.created_at ? new Date(w.created_at).toLocaleDateString('id-ID') : '-',
-                order_number: w.reference || `WD-${w.id}`,
+                order_number: w.notes?.startsWith('[OPS]') ? 'OPS-WITHDRAW' : 'ADMIN-WITHDRAW',
                 type: 'withdrawal',
-                source: w.notes || 'Withdrawal',
+                source: w.notes?.replace('[OPS] ', '') || 'Withdrawal',
                 amount: Number(w.amount || 0)
             }))
         ].sort((a, b) => {
@@ -935,8 +941,10 @@ export const earnings = async (req, res) => {
             totalEarnings: platformRevenue,
             revenueAdmin: totalAdmin,
             revenueOps: totalOps,
-            totalWithdrawn,
-            availableBalance: platformRevenue - totalWithdrawn,
+            totalAdminWithdrawn,
+            totalOpsWithdrawn,
+            availableAdmin: totalAdmin - totalAdminWithdrawn,
+            availableOps: totalOps - totalOpsWithdrawn,
             history,
             bank_details
         });
@@ -947,21 +955,25 @@ export const earnings = async (req, res) => {
 };
 
 export const withdrawEarnings = async (req, res) => {
-    const { amount, notes } = req.body;
+    const { amount, notes, type } = req.body; // type: 'admin' or 'ops'
     try {
-        // 1. Calculate Available Balance
+        // 1. Calculate Balances
         const completedOrders = await prisma.orders.findMany({ where: { status: 'completed' } });
-        let totalPlatform = 0;
+        let totalAdmin = 0;
+        let totalOps = 0;
         completedOrders.forEach(o => {
             const base = Number(o.base_price || 0);
             const rush = Number(o.rush_fee || 0);
             const platform = Number(o.platform_fee || 0);
-            totalPlatform += (base * 0.25) + (rush * 0.20) + platform;
+            totalAdmin += (base * 0.20) + (rush * 0.20);
+            totalOps += (base * 0.05) + platform;
         });
 
         const withdrawalRecords = await prisma.admin_withdrawals.findMany();
-        const totalWithdrawn = withdrawalRecords.reduce((sum, w) => sum + Number(w.amount || 0), 0);
-        const available = totalPlatform - totalWithdrawn;
+        const totalAdminWithdrawn = withdrawalRecords.filter(w => !w.notes?.startsWith('[OPS]')).reduce((sum, w) => sum + Number(w.amount || 0), 0);
+        const totalOpsWithdrawn = withdrawalRecords.filter(w => w.notes?.startsWith('[OPS]')).reduce((sum, w) => sum + Number(w.amount || 0), 0);
+
+        const available = type === 'ops' ? (totalOps - totalOpsWithdrawn) : (totalAdmin - totalAdminWithdrawn);
 
         if (Number(amount) > available) {
             return flashRedirect(res, '/admin/earnings', 'Saldo tidak mencukupi', true);
@@ -977,11 +989,14 @@ export const withdrawEarnings = async (req, res) => {
         });
         const bankSnapshot = bankSettings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {});
 
-        // 3. Create Withdrawal
+        // 3. Create Withdrawal with Type Prefix and Admin Name
+        const typePrefix = type === 'ops' ? '[OPS] ' : '';
+        const adminName = req.session?.user?.name || 'Admin';
+        
         await prisma.admin_withdrawals.create({
             data: {
                 amount: Number(amount),
-                notes: notes || 'Admin Withdrawal',
+                notes: `${typePrefix}${notes || (type === 'ops' ? 'Ops Fund Withdrawal' : 'Admin Withdrawal')} (by ${adminName})`,
                 bank_details_snapshot: JSON.stringify(bankSnapshot),
                 created_at: new Date(),
                 updated_at: new Date()
