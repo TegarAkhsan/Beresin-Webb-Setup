@@ -452,7 +452,24 @@ class OrderController extends Controller
         return back()->with('message', 'Permintaan refund telah dikirim ke Admin untuk verifikasi.');
     }
 
+    public function showAdditionalPayment(Order $order)
+    {
+        if ($order->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $order->load(['package.service', 'user']);
+        $settings = \App\Models\Setting::whereIn('key', ['whatsapp_number', 'qris_image'])->pluck('value', 'key');
+
+        return Inertia::render('Orders/AdditionalPayment', [
+            'order'            => $order,
+            'qris_image'       => $settings['qris_image'] ?? null,
+            'whatsapp_number'  => $settings['whatsapp_number'] ?? null,
+        ]);
+    }
+
     public function uploadAdditionalPayment(Request $request, Order $order)
+
     {
         if ($order->user_id !== Auth::id()) {
             abort(403);

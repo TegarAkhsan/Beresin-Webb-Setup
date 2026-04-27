@@ -82,7 +82,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/orders/{order}/accept', [App\Http\Controllers\OrderController::class, 'acceptResult'])->name('orders.accept');
     Route::post('/orders/{order}/revision', [App\Http\Controllers\OrderController::class, 'requestRevision'])->name('orders.revision');
     Route::post('/orders/{order}/refund', [App\Http\Controllers\OrderController::class, 'requestRefund'])->name('orders.refund');
+    Route::get('/orders/{order}/additional-payment', [App\Http\Controllers\OrderController::class, 'showAdditionalPayment'])->name('orders.additional-payment.show');
     Route::post('/orders/{order}/additional-payment', [App\Http\Controllers\OrderController::class, 'uploadAdditionalPayment'])->name('orders.additional-payment');
+
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

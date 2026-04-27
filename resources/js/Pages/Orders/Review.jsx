@@ -30,10 +30,6 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
         paid_revision: false
     });
 
-    const { data: paymentData, setData: setPaymentData, post: postPayment, processing: paymentProcessing, errors: paymentErrors } = useForm({
-        payment_method: 'qris',
-        payment_proof: null
-    });
 
     const [modalType, setModalType] = useState(null); // 'accept' | 'revision' | 'refund' | 'confirm_milestone' | 'payment'
     const [refundStep, setRefundStep] = useState(1);
@@ -180,7 +176,11 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                                         <div className="bg-white border border-orange-200 rounded-xl px-4 py-2">
                                             <span className="text-xs text-gray-500 block">Total Tagihan</span>
                                             <span className="text-xl font-black text-orange-700">
-                                                Rp {new Intl.NumberFormat('id-ID').format(order.additional_revision_fee)}
+                                                Rp {new Intl.NumberFormat('id-ID').format(
+                                                    order.additional_revision_fee > 0
+                                                        ? order.additional_revision_fee
+                                                        : extraRevisionCount * 20000
+                                                )}
                                             </span>
                                             <span className="text-xs text-gray-400 block">{extraRevisionCount} revisi × Rp 20.000</span>
                                         </div>
@@ -191,7 +191,7 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                                             </div>
                                         ) : (
                                             <button
-                                                onClick={() => setModalType('payment')}
+                                                onClick={() => router.visit(route('orders.additional-payment.show', order.id))}
                                                 className="inline-flex items-center gap-2 bg-orange-600 text-white font-black text-sm px-5 py-2.5 rounded-xl border-2 border-orange-800 shadow-[3px_3px_0px_0px_rgba(154,52,18,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
@@ -456,9 +456,9 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
 
                                     <button
                                         onClick={() => {
-                                            // Payment gate: if there are unpaid revision fees, go to payment modal first
+                                            // Payment gate: if there are unpaid revision fees, go to payment page first
                                             if (hasUnpaidRevisionFee) {
-                                                setModalType('payment');
+                                                router.visit(route('orders.additional-payment.show', order.id));
                                                 return;
                                             }
                                             if (order.milestones && order.milestones.length > 0) {
@@ -677,7 +677,7 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                             onSuccess: () => {
                                 resetRevision();
                                 if (isPaid) {
-                                    setModalType('payment');
+                                    router.visit(route('orders.additional-payment.show', order.id));
                                 } else {
                                     setModalType(null);
                                 }
@@ -896,120 +896,7 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                 </div>
             </Modal>
 
-            {/* 5. PAYMENT MODAL */}
-            <Modal show={modalType === 'payment'} onClose={() => setModalType(null)}>
-                <div className="p-8">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
-                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                    </div>
-                    <h2 className="text-2xl font-black text-slate-900 mb-2 text-center">Pelunasan Revisi Tambahan</h2>
-                    <p className="text-center text-slate-500 mb-6">
-                        Mohon lunasi tagihan tambahan untuk mengunduh hasil final.
-                    </p>
 
-                    <div className="bg-slate-50 p-4 rounded-xl mb-6 text-center border border-slate-200">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Tagihan</p>
-                        <p className="text-3xl font-black text-slate-900">
-                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(order.additional_revision_fee || 0)}
-                        </p>
-                        {order.additional_payment_status === 'pending' && (
-                            <div className="mt-2 inline-block px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold border border-yellow-200">
-                                Pembayaran Sedang Diverifikasi Admin
-                            </div>
-                        )}
-                    </div>
-
-                    {order.additional_payment_status === 'pending' ? (
-                        <div className="text-center">
-                            <p className="text-slate-500 text-sm mb-4">Bukti pembayaran Anda sudah kami terima dan sedang dalam proses pengecekan admin. Mohon tunggu konfirmasi via WhatsApp atau cek dashboard secara berkala.</p>
-                            <button
-                                onClick={() => setModalType(null)}
-                                className="px-6 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-300 transition"
-                            >
-                                Tutup
-                            </button>
-                        </div>
-                    ) : (
-                        <form onSubmit={(e) => {
-                            e.preventDefault();
-                            postPayment(route('orders.additional-payment', order.id), {
-                                onSuccess: () => setModalType(null)
-                            });
-                        }}>
-                            <div className="mb-6">
-                                <InputLabel value="Metode Pembayaran" className="font-bold text-slate-900 uppercase tracking-wide text-xs mb-2" />
-                                <div className="grid grid-cols-2 gap-3">
-                                    <label className={`cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all ${paymentData.payment_method === 'qris' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <input type="radio" value="qris" checked={paymentData.payment_method === 'qris'} onChange={(e) => setPaymentData('payment_method', e.target.value)} className="hidden" />
-                                        <span className="font-bold text-sm text-slate-700">QRIS</span>
-                                    </label>
-                                    <label className={`cursor-pointer border-2 rounded-xl p-3 flex flex-col items-center justify-center gap-2 transition-all ${paymentData.payment_method === 'bank' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <input type="radio" value="bank" checked={paymentData.payment_method === 'bank'} onChange={(e) => setPaymentData('payment_method', e.target.value)} className="hidden" />
-                                        <span className="font-bold text-sm text-slate-700">Transfer Bank / VA</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            {paymentData.payment_method === 'qris' && (
-                                <div className="mb-6 text-center animate-fade-in">
-                                    <p className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">Scan QRIS Berikut:</p>
-                                    <div className="bg-white border-2 border-slate-900 inline-block p-4 rounded-2xl mb-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                        {qris_image ? (
-                                            <img src={`/storage/${qris_image}`} alt="QRIS" className="w-48 h-auto mx-auto rounded-lg" />
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center w-40 h-40 bg-gray-100 rounded-lg">
-                                                <span className="text-gray-400 text-xs">No QRIS Image Configured</span>
-                                            </div>
-                                        )}
-                                        <p className="text-[10px] font-black mt-2 text-slate-900">BERESIN PAYMENT</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {paymentData.payment_method === 'bank' && (
-                                <div className="mb-6 p-5 bg-blue-50 border-2 border-blue-100 rounded-2xl text-center animate-fade-in shadow-sm">
-                                    <div className="flex items-center justify-center gap-2 mb-2">
-                                        <div className="px-2 py-0.5 bg-blue-600 text-white text-[10px] font-black rounded uppercase">BCA</div>
-                                        <span className="text-blue-800 font-black text-lg tracking-wider">8801234567890</span>
-                                    </div>
-                                    <p className="text-blue-600 text-xs font-bold">a.n. Beresin Admin</p>
-                                    <button
-                                        onClick={() => {
-                                            navigator.clipboard.writeText('8801234567890');
-                                            alert('Nomor VA berhasil disalin!');
-                                        }}
-                                        className="mt-3 text-[10px] font-black text-blue-700 bg-white border border-blue-200 px-3 py-1 rounded-full hover:bg-blue-100 transition"
-                                    >
-                                        SALIN NOMOR VA
-                                    </button>
-                                </div>
-                            )}
-
-                            <div className="mb-6">
-                                <InputLabel value="Upload Bukti Pembayaran" className="font-bold text-slate-900 uppercase tracking-wide text-xs mb-2" />
-                                <input
-                                    type="file"
-                                    required
-                                    className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
-                                    onChange={(e) => setPaymentData('payment_proof', e.target.files[0])}
-                                />
-                                {paymentErrors.payment_proof && <p className="text-red-500 text-xs mt-1">{paymentErrors.payment_proof}</p>}
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={paymentProcessing}
-                                className="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200"
-                            >
-                                Kirim Bukti Pembayaran
-                            </button>
-                            <p className="text-center text-[10px] text-slate-400 mt-4">
-                                Setelah upload, harap konfirmasi ke Admin via WhatsApp untuk mempercepat proses.
-                            </p>
-                        </form>
-                    )}
-                </div>
-            </Modal>
         </AuthenticatedLayout >
     );
 }
