@@ -444,7 +444,7 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                                         onClick={() => {
                                             // Payment gate: if there are unpaid revision fees, go to payment page first
                                             if (hasUnpaidRevisionFee) {
-                                                window.location.href = `/orders/${order.id}/additional-payment`;
+                                                router.visit(`/orders/${order.id}/additional-payment`);
                                                 return;
                                             }
                                             if (order.milestones && order.milestones.length > 0) {
@@ -663,7 +663,7 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                             onSuccess: () => {
                                 resetRevision();
                                 if (isPaid) {
-                                    window.location.href = `/orders/${order.id}/additional-payment`;
+                                    router.visit(`/orders/${order.id}/additional-payment`);
                                 } else {
                                     setModalType(null);
                                 }
