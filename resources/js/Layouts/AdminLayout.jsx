@@ -10,7 +10,9 @@ export default function AdminLayout({ user, header, children }) {
     const { url } = usePage();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
-    const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+    const [verifyOrdersCount, setVerifyOrdersCount] = useState(0);
+    const [pendingPayoutsCount, setPendingPayoutsCount] = useState(0);
+    const [pendingAssignmentsCount, setPendingAssignmentsCount] = useState(0);
     const [showChatToast, setShowChatToast] = useState(false);
     const [showOrderToast, setShowOrderToast] = useState(false);
     const audioRef = useRef(null);
