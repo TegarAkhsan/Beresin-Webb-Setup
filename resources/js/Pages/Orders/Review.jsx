@@ -25,8 +25,9 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
     });
 
     const { data: revisionData, setData: setRevisionData, post: postRevision, processing: revisionProcessing, errors: revisionErrors, reset: resetRevision, transform: transformRevision } = useForm({
-        revision_reason: '',
-        revision_file: null
+        reason: '',
+        revision_file: null,
+        paid_revision: false
     });
 
     const { data: paymentData, setData: setPaymentData, post: postPayment, processing: paymentProcessing, errors: paymentErrors } = useForm({
@@ -654,13 +655,17 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                         e.preventDefault();
                         const isPaid = order.revision_count >= (order.package?.max_revisions || 3);
 
-                        // Gunakan method post langsung tanpa transformRevision
-                        // karena transformRevision berisiko asinkron sebelum disubmit
-                        postRevision(route('orders.revision', order.id), {
-                            data: {
-                                ...revisionData,
-                                paid_revision: isPaid
-                            },
+                        // Gunakan router.post langsung agar paid_revision pasti terkirim
+                        // tanpa mengandalkan async state update dari setRevisionData
+                        const formData = new FormData();
+                        formData.append('reason', revisionData.reason);
+                        formData.append('paid_revision', isPaid ? '1' : '0');
+                        if (revisionData.revision_file) {
+                            formData.append('revision_file', revisionData.revision_file);
+                        }
+
+                        router.post(route('orders.revision', order.id), formData, {
+                            forceFormData: true,
                             onSuccess: () => {
                                 resetRevision();
                                 if (isPaid) {
@@ -677,10 +682,10 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                                 className="w-full rounded-xl border-slate-300 shadow-sm focus:border-slate-900 focus:ring-slate-900 h-32"
                                 placeholder="Jelaskan bagian mana yang perlu diperbaiki..."
                                 required
-                                value={revisionData.revision_reason}
-                                onChange={(e) => setRevisionData('revision_reason', e.target.value)}
+                                value={revisionData.reason}
+                                onChange={(e) => setRevisionData('reason', e.target.value)}
                             ></textarea>
-                            {revisionErrors.revision_reason && <p className="text-red-600 text-xs mt-1">{revisionErrors.revision_reason}</p>}
+                            {revisionErrors.reason && <p className="text-red-600 text-xs mt-1">{revisionErrors.reason}</p>}
                         </div>
 
                         <div className="mb-6">
