@@ -212,41 +212,50 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                         {/* Mobile Card View (Additional) */}
                         <div className="md:hidden space-y-4">
                             {additionalPaymentOrders && additionalPaymentOrders.length > 0 ? (
-                                additionalPaymentOrders.map((order) => (
-                                    <div key={order.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h4 className="font-bold text-gray-900">{order.order_number || `#${order.id}`}</h4>
-                                            <p className="font-bold text-orange-600">
-                                                Rp {new Intl.NumberFormat('id-ID').format(order.additional_revision_fee)}
-                                            </p>
-                                        </div>
-                                        <p className="text-xs text-gray-500 mb-3">{order.user?.name}</p>
+                                additionalPaymentOrders.map((order) => {
+                                    const maxRevisions = order.package?.max_revisions ?? 3;
+                                    const extraCount = Math.max(
+                                        order.additional_revision_fee > 0 ? Math.round(order.additional_revision_fee / 20000) : 0,
+                                        order.revision_count > maxRevisions ? order.revision_count - maxRevisions : 0
+                                    );
+                                    const totalFee = order.additional_revision_fee > 0 ? order.additional_revision_fee : extraCount * 20000;
 
-                                        <div className="flex gap-2 pt-3 border-t border-gray-200">
-                                            {order.additional_payment_proof ? (
-                                                <a
-                                                    href={'/storage/' + order.additional_payment_proof}
-                                                    target="_blank"
-                                                    className="flex-1 text-center py-2 bg-blue-50 text-blue-600 rounded-md text-sm font-bold border border-blue-100"
+                                    return (
+                                        <div key={order.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h4 className="font-bold text-gray-900">{order.order_number || `#${order.id}`}</h4>
+                                                <p className="font-bold text-orange-600">
+                                                    Rp {new Intl.NumberFormat('id-ID').format(totalFee)}
+                                                </p>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mb-3">{order.user?.name}</p>
+
+                                            <div className="flex gap-2 pt-3 border-t border-gray-200">
+                                                {order.additional_payment_proof ? (
+                                                    <a
+                                                        href={'/storage/' + order.additional_payment_proof}
+                                                        target="_blank"
+                                                        className="flex-1 text-center py-2 bg-blue-50 text-blue-600 rounded-md text-sm font-bold border border-blue-100"
+                                                    >
+                                                        View Proof
+                                                    </a>
+                                                ) : (
+                                                    <div className="flex-1 text-center py-2 bg-gray-100 text-gray-400 rounded-md text-sm italic">No Proof</div>
+                                                )}
+                                                <PrimaryButton
+                                                    className="flex-1 justify-center bg-emerald-600 hover:bg-emerald-700"
+                                                    onClick={() => {
+                                                        if (confirm('Approve additional payment?')) {
+                                                            post(route('admin.orders.approve_additional', order.id));
+                                                        }
+                                                    }}
                                                 >
-                                                    View Proof
-                                                </a>
-                                            ) : (
-                                                <div className="flex-1 text-center py-2 bg-gray-100 text-gray-400 rounded-md text-sm italic">No Proof</div>
-                                            )}
-                                            <PrimaryButton
-                                                className="flex-1 justify-center bg-emerald-600 hover:bg-emerald-700"
-                                                onClick={() => {
-                                                    if (confirm('Approve additional payment?')) {
-                                                        post(route('admin.orders.approve_additional', order.id));
-                                                    }
-                                                }}
-                                            >
-                                                Approve
-                                            </PrimaryButton>
+                                                    Approve
+                                                </PrimaryButton>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             ) : (
                                 <div className="text-center py-6 text-gray-500 italic text-sm">
                                     No pending additional revision payments found.
@@ -268,38 +277,47 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                                 </thead>
                                 <tbody>
                                     {additionalPaymentOrders && additionalPaymentOrders.length > 0 ? (
-                                        additionalPaymentOrders.map((order) => (
-                                            <tr key={order.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50">
-                                                <td className="px-6 py-4 font-medium">{order.order_number || `#${order.id}`}</td>
-                                                <td className="px-6 py-4">
-                                                    <div className="font-medium text-gray-900">{order.user?.name}</div>
-                                                </td>
-                                                <td className="px-6 py-4 font-bold text-orange-600">
-                                                    Rp {new Intl.NumberFormat('id-ID').format(order.additional_revision_fee)}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {order.additional_payment_proof ? (
-                                                        <a href={'/storage/' + order.additional_payment_proof} target="_blank" className="text-blue-600 underline hover:text-blue-800">
-                                                            View Proof
-                                                        </a>
-                                                    ) : (
-                                                        <span className="text-gray-400 italic">No proof</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <PrimaryButton
-                                                        className="bg-emerald-600 hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-800"
-                                                        onClick={() => {
-                                                            if (confirm('Approve additional payment?')) {
-                                                                post(route('admin.orders.approve_additional', order.id));
-                                                            }
-                                                        }}
-                                                    >
-                                                        Approve
-                                                    </PrimaryButton>
-                                                </td>
-                                            </tr>
-                                        ))
+                                        additionalPaymentOrders.map((order) => {
+                                            const maxRevisions = order.package?.max_revisions ?? 3;
+                                            const extraCount = Math.max(
+                                                order.additional_revision_fee > 0 ? Math.round(order.additional_revision_fee / 20000) : 0,
+                                                order.revision_count > maxRevisions ? order.revision_count - maxRevisions : 0
+                                            );
+                                            const totalFee = order.additional_revision_fee > 0 ? order.additional_revision_fee : extraCount * 20000;
+
+                                            return (
+                                                <tr key={order.id} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50">
+                                                    <td className="px-6 py-4 font-medium">{order.order_number || `#${order.id}`}</td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-medium text-gray-900">{order.user?.name}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 font-bold text-orange-600">
+                                                        Rp {new Intl.NumberFormat('id-ID').format(totalFee)}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {order.additional_payment_proof ? (
+                                                            <a href={'/storage/' + order.additional_payment_proof} target="_blank" className="text-blue-600 underline hover:text-blue-800">
+                                                                View Proof
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-gray-400 italic">No proof</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <PrimaryButton
+                                                            className="bg-emerald-600 hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-800"
+                                                            onClick={() => {
+                                                                if (confirm('Approve additional payment?')) {
+                                                                    post(route('admin.orders.approve_additional', order.id));
+                                                                }
+                                                            }}
+                                                        >
+                                                            Approve
+                                                        </PrimaryButton>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
                                     ) : (
                                         <tr>
                                             <td colSpan="5" className="px-6 py-8 text-center text-gray-500 italic">
