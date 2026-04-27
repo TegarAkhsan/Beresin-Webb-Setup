@@ -2,7 +2,7 @@ import express from 'express';
 import {
     create, store, show, review, downloadInvoice,
     update, cancel, acceptResult, requestRevision,
-    requestRefund, uploadAdditionalPayment
+    requestRefund, uploadAdditionalPayment, showAdditionalPayment
 } from '../controllers/orderController.js';
 import { requireAuth } from '../middleware/inertiaMiddleware.js';
 import { upload, handleMulterError } from '../middleware/upload.js';
@@ -55,9 +55,12 @@ router.post('/orders/:id/revision', requireAuth,
 // Request refund (orders.refund)
 router.post('/orders/:id/refund', requireAuth, requestRefund);
 
+// Show additional payment page (orders.additional-payment.show)
+router.get('/orders/:id/additional-payment', requireAuth, showAdditionalPayment);
+
 // Upload additional payment (orders.additional-payment)
 router.post('/orders/:id/additional-payment', requireAuth,
-    withUpload(upload.single('additional_payment_proof')),
+    withUpload(upload.single('payment_proof')),
     uploadAdditionalPayment
 );
 

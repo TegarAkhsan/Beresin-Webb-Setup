@@ -689,3 +689,62 @@ export const uploadAdditionalPayment = async (req, res) => {
     }
 };
 
+
+export const showAdditionalPayment = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const order = await prisma.orders.findFirst({
+            where: {
+                OR: [
+                    { order_number: id },
+                    { id: isNaN(parseInt(id)) ? -1 : parseInt(id) }
+                ]
+            },
+            include: {
+                packages: { include: { services: true } },
+                users_orders_user_idTousers: true,
+            }
+        });
+
+        if (!order) return res.status(404).send('Order not found');
+        if (order.user_id !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).send('Forbidden');
+        }
+
+        const settingsRaw = await prisma.settings.findMany({
+            where: { key: { in: ['whatsapp_number', 'qris_image'] } }
+        });
+        const settings = settingsRaw.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
+
+        const serialized = serializeOrder(order);
+
+        res.inertia('Orders/AdditionalPayment', {
+            order: {
+                ...serialized,
+                package: {
+                    id: order.packages?.id,
+                    name: order.packages?.name,
+                    description: order.packages?.description,
+                    price: Number(order.packages?.price || 0),
+                    joki_fee: Number(order.packages?.joki_fee || 0),
+                    duration_days: order.packages?.duration_days,
+                    max_revisions: order.packages?.max_revisions,
+                    is_negotiable: order.packages?.is_negotiable,
+                    features: order.packages?.features,
+                    service: order.packages?.services ? {
+                        id: order.packages.services.id,
+                        name: order.packages.services.name,
+                        slug: order.packages.services.slug,
+                    } : null,
+                },
+                user: order.users_orders_user_idTousers,
+            },
+            whatsapp_number: settings.whatsapp_number || null,
+            qris_image: settings.qris_image || null,
+        });
+    } catch (error) {
+        console.error('Order Show Additional Payment Error', error);
+        res.status(500).send('Internal Server Error');
+    }
+};
+

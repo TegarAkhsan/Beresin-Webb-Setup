@@ -87,7 +87,7 @@ export const verify = async (req, res) => {
                 orderBy: { created_at: 'desc' }
             }),
             prisma.orders.findMany({
-                where: { additional_payment_status: 'pending' },
+                where: { additional_payment_status: 'pending_verification' },
                 include: { users_orders_user_idTousers: true, packages: { include: { services: true } } },
                 orderBy: { created_at: 'desc' }
             })
@@ -288,7 +288,7 @@ export const approveAdditionalPayment = async (req, res) => {
             where: { id: parseInt(id) },
             data: {
                 additional_payment_status: 'paid',
-                amount: { increment: Number(order.additional_fee || 0) },
+                amount: { increment: Number(order.additional_revision_fee || 0) },
                 updated_at: new Date()
             }
         });
