@@ -10,7 +10,7 @@ import {
     settings, updateSettings,
     transactions,
     chat, sendChatMessage, getChatMessages, sendChatReply,
-    earnings
+    earnings, withdrawEarnings, updateEarningsSettings
 } from '../controllers/adminController.js';
 import { requireAuth, isAdmin } from '../middleware/inertiaMiddleware.js';
 import { upload, handleMulterError } from '../middleware/upload.js';
@@ -82,5 +82,7 @@ router.post('/admin/chat/send', requireAuth, isAdmin, sendChatMessage);
 
 // ─── Earnings ─────────────────────────────────────────────────────────────────
 router.get('/admin/earnings', requireAuth, isAdmin, earnings);
+router.post('/admin/earnings/withdraw', requireAuth, isAdmin, withdrawEarnings);
+router.post('/admin/earnings/settings', requireAuth, isAdmin, updateEarningsSettings);
 
 export default router;

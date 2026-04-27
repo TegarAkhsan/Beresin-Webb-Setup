@@ -945,3 +945,76 @@ export const earnings = async (req, res) => {
         return flashRedirect(res, '/admin', 'Gagal memuat earnings', true);
     }
 };
+
+export const withdrawEarnings = async (req, res) => {
+    const { amount, notes } = req.body;
+    try {
+        // 1. Calculate Available Balance
+        const completedOrders = await prisma.orders.findMany({ where: { status: 'completed' } });
+        let totalPlatform = 0;
+        completedOrders.forEach(o => {
+            const base = Number(o.base_price || 0);
+            const rush = Number(o.rush_fee || 0);
+            const platform = Number(o.platform_fee || 0);
+            totalPlatform += (base * 0.25) + (rush * 0.20) + platform;
+        });
+
+        const withdrawalRecords = await prisma.admin_withdrawals.findMany();
+        const totalWithdrawn = withdrawalRecords.reduce((sum, w) => sum + Number(w.amount || 0), 0);
+        const available = totalPlatform - totalWithdrawn;
+
+        if (Number(amount) > available) {
+            return flashRedirect(res, '/admin/earnings', 'Saldo tidak mencukupi', true);
+        }
+
+        if (Number(amount) < 10000) {
+            return flashRedirect(res, '/admin/earnings', 'Minimal penarikan Rp 10.000', true);
+        }
+
+        // 2. Fetch Bank Details for Snapshot
+        const bankSettings = await prisma.settings.findMany({
+            where: { key: { in: ['bank_name', 'account_number', 'account_holder'] } }
+        });
+        const bankSnapshot = bankSettings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {});
+
+        // 3. Create Withdrawal
+        await prisma.admin_withdrawals.create({
+            data: {
+                amount: Number(amount),
+                notes: notes || 'Admin Withdrawal',
+                bank_details_snapshot: JSON.stringify(bankSnapshot),
+                created_at: new Date(),
+                updated_at: new Date()
+            }
+        });
+
+        return flashRedirect(res, '/admin/earnings', 'Penarikan berhasil diajukan');
+    } catch (error) {
+        console.error('[ADMIN WITHDRAW ERROR]', error.message);
+        return flashRedirect(res, '/admin/earnings', 'Gagal memproses penarikan', true);
+    }
+};
+
+export const updateEarningsSettings = async (req, res) => {
+    const { bank_name, account_number, account_holder } = req.body;
+    try {
+        const data = [
+            { key: 'bank_name', value: bank_name },
+            { key: 'account_number', value: account_number },
+            { key: 'account_holder', value: account_holder }
+        ];
+
+        for (const item of data) {
+            await prisma.settings.upsert({
+                where: { key: item.key },
+                update: { value: item.value, updated_at: new Date() },
+                create: { key: item.key, value: item.value, created_at: new Date(), updated_at: new Date() }
+            });
+        }
+
+        return flashRedirect(res, '/admin/earnings', 'Pengaturan bank berhasil disimpan');
+    } catch (error) {
+        console.error('[ADMIN EARNINGS SETTINGS ERROR]', error.message);
+        return flashRedirect(res, '/admin/earnings', 'Gagal menyimpan pengaturan', true);
+    }
+};
