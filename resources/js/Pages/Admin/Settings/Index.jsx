@@ -305,6 +305,48 @@ export default function SettingsIndex({ auth, settings }) {
                                         </div>
                                     )}
 
+                                    {/* QRIS TAB */}
+                                    {activeTab === 'qris' && (
+                                        <div className="space-y-6 animate-fade-in-up">
+                                            <h3 className="text-lg font-medium mb-4 pb-2 border-b">QRIS Configuration</h3>
+                                            
+                                            <div>
+                                                <InputLabel htmlFor="qris_image" value="Upload QRIS Code" />
+                                                <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:bg-gray-50 transition-colors">
+                                                    <div className="space-y-1 text-center">
+                                                        <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                        </svg>
+                                                        <div className="flex text-sm text-gray-600">
+                                                            <label htmlFor="qris_image" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                                                <span>Upload a file</span>
+                                                                <input id="qris_image" name="qris_image" type="file" className="sr-only" onChange={(e) => setData('qris_image', e.target.files[0])} accept="image/*" />
+                                                            </label>
+                                                            <p className="pl-1">or drag and drop</p>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500">PNG, JPG, SVG up to 1MB</p>
+                                                    </div>
+                                                </div>
+                                                {data.qris_image && <p className="text-sm text-indigo-600 mt-2">Selected: {data.qris_image.name}</p>}
+                                                <InputError message={errors.qris_image} className="mt-2" />
+                                            </div>
+
+                                            {(qrisPreview || settings.qris_image) && (
+                                                <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                                                    <p className="text-sm text-gray-500 mb-2">{qrisPreview ? 'New QRIS Preview:' : 'Current QRIS Code:'}</p>
+                                                    <div className="border p-2 bg-white rounded flex items-center justify-center">
+                                                        <img src={qrisPreview || getFileUrl(settings.qris_image)} alt="QRIS Preview" className="h-48 w-48 object-contain" />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center gap-4 pt-4">
+                                                <PrimaryButton disabled={processing}>Save QRIS Settings</PrimaryButton>
+                                                {recentlySuccessful && <p className="text-sm text-green-600">Saved.</p>}
+                                            </div>
+                                        </div>
+                                    )}
+
                                 </form>
                             </div>
                         </div>
