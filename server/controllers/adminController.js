@@ -878,29 +878,45 @@ export const earnings = async (req, res) => {
             orderBy: { completed_at: 'desc' }
         });
 
-        const totalEarnings = completedOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
-        const totalJokiFees = completedOrders.reduce((sum, o) => sum + Number(o.joki_fee || 0), 0);
-        const platformRevenue = totalEarnings - totalJokiFees;
+        let totalAdmin = 0;
+        let totalOps = 0;
+        completedOrders.forEach(o => {
+            const base = Number(o.base_price || 0);
+            const rush = Number(o.rush_fee || 0);
+            const platform = Number(o.platform_fee || 0);
+            
+            totalAdmin += (base * 0.20) + (rush * 0.20);
+            totalOps += (base * 0.05) + platform;
+        });
+
+        const platformRevenue = totalAdmin + totalOps;
 
         const withdrawalRecords = await prisma.admin_withdrawals.findMany({ orderBy: { created_at: 'desc' } });
         const totalWithdrawn = withdrawalRecords.reduce((sum, w) => sum + Number(w.amount || 0), 0);
-
+ 
         // Bank details from settings
         const bankSettings = await prisma.settings.findMany({
             where: { key: { in: ['bank_name', 'account_number', 'account_holder'] } }
         });
         const bank_details = bankSettings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {});
-
+ 
         // Build history array
         const history = [
-            ...completedOrders.map(o => ({
-                id: `order-${o.id}`,
-                date: o.completed_at ? new Date(o.completed_at).toLocaleDateString('id-ID') : '-',
-                order_number: o.order_number,
-                type: 'income',
-                source: o.packages?.services?.name ? `${o.packages.services.name} — Platform fee` : 'Order',
-                amount: Number(o.platform_fee || 5000)
-            })),
+            ...completedOrders.map(o => {
+                const base = Number(o.base_price || 0);
+                const rush = Number(o.rush_fee || 0);
+                const platform = Number(o.platform_fee || 0);
+                const orderPlatformShare = (base * 0.25) + (rush * 0.20) + platform;
+
+                return {
+                    id: `order-${o.id}`,
+                    date: o.completed_at ? new Date(o.completed_at).toLocaleDateString('id-ID') : '-',
+                    order_number: o.order_number,
+                    type: 'income',
+                    source: o.packages?.services?.name ? `${o.packages.services.name} — Platform Share` : 'Order Platform Share',
+                    amount: orderPlatformShare
+                };
+            }),
             ...withdrawalRecords.map(w => ({
                 id: `withdraw-${w.id}`,
                 date: w.created_at ? new Date(w.created_at).toLocaleDateString('id-ID') : '-',
@@ -909,10 +925,16 @@ export const earnings = async (req, res) => {
                 source: w.notes || 'Withdrawal',
                 amount: Number(w.amount || 0)
             }))
-        ].sort((a, b) => (a.date > b.date ? -1 : 1));
-
+        ].sort((a, b) => {
+            const dateA = new Date(a.date.split('/').reverse().join('-'));
+            const dateB = new Date(b.date.split('/').reverse().join('-'));
+            return dateB - dateA;
+        });
+ 
         res.inertia('Admin/Earnings', {
             totalEarnings: platformRevenue,
+            revenueAdmin: totalAdmin,
+            revenueOps: totalOps,
             totalWithdrawn,
             availableBalance: platformRevenue - totalWithdrawn,
             history,

@@ -7,9 +7,9 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 
-export default function Earnings({ auth, totalEarnings = 0, totalWithdrawn = 0, availableBalance = 0, history = [], bank_details = {} }) {
+export default function Earnings({ auth, totalEarnings = 0, revenueAdmin = 0, revenueOps = 0, totalWithdrawn = 0, availableBalance = 0, history = [], bank_details = {} }) {
     const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
-
+ 
     // Withdraw Form
     const { data: withdrawData, setData: setWithdrawData, post: postWithdraw, processing: withdrawProcessing, reset: resetWithdraw, errors: withdrawErrors } = useForm({
         amount: '',
@@ -40,58 +40,82 @@ export default function Earnings({ auth, totalEarnings = 0, totalWithdrawn = 0, 
         e.preventDefault();
         postSettings(route('admin.earnings.settings'));
     };
-
+ 
     return (
         <AdminLayout
             user={auth.user}
-            header="My Earnings"
+            header="Earnings & Finances"
         >
             <Head title="Admin Earnings" />
-
+ 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
                 {/* 1. FINANCIAL SUMMARY */}
                 <div className="xl:col-span-2 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Total Lifetime Earnings */}
-                        <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-sm flex flex-col justify-between">
-                            <div>
-                                <h2 className="text-gray-500 font-medium uppercase tracking-wider text-sm mb-2">Total Lifetime Earnings</h2>
-                                <div className="text-4xl font-bold text-gray-900 mb-1">
-                                    <span className="text-xl opacity-60 align-top mr-1">Rp</span>
-                                    {new Intl.NumberFormat('id-ID').format(totalEarnings)}
-                                </div>
-                            </div>
-                            <div className="mt-4 pt-4 border-t border-gray-50 text-xs text-gray-400">
-                                Accumulated commission (20%)
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Admin Profit */}
+                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                            <h2 className="text-gray-500 font-medium uppercase tracking-wider text-[10px] mb-2">Admin Profit (20%)</h2>
+                            <div className="text-2xl font-bold text-gray-900">
+                                <span className="text-sm opacity-60 mr-1">Rp</span>
+                                {new Intl.NumberFormat('id-ID').format(revenueAdmin)}
                             </div>
                         </div>
 
-                        {/* Available Balance (Active) */}
-                        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl p-8 text-white shadow-lg overflow-hidden relative flex flex-col justify-between">
-                            <div className="relative z-10">
+                        {/* Ops Fund */}
+                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                            <h2 className="text-gray-500 font-medium uppercase tracking-wider text-[10px] mb-2">Ops Fund (5% + Fee)</h2>
+                            <div className="text-2xl font-bold text-gray-900">
+                                <span className="text-sm opacity-60 mr-1">Rp</span>
+                                {new Intl.NumberFormat('id-ID').format(revenueOps)}
+                            </div>
+                        </div>
+
+                        {/* Total Platform Revenue */}
+                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                            <h2 className="text-gray-500 font-medium uppercase tracking-wider text-[10px] mb-2">Total Platform Income</h2>
+                            <div className="text-2xl font-bold text-indigo-600">
+                                <span className="text-sm opacity-60 mr-1">Rp</span>
+                                {new Intl.NumberFormat('id-ID').format(totalEarnings)}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Available Balance (Main Withdrawal Card) */}
+                    <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div>
                                 <h2 className="text-indigo-100 font-medium uppercase tracking-wider text-sm mb-2">Available Balance</h2>
-                                <div className="text-5xl font-bold mb-1">
+                                <div className="text-5xl font-bold">
                                     <span className="text-2xl opacity-80 align-top mr-1">Rp</span>
                                     {new Intl.NumberFormat('id-ID').format(availableBalance)}
                                 </div>
-                                <p className="text-indigo-200 text-sm mt-1">Ready to withdraw</p>
+                                <p className="text-indigo-200 text-sm mt-2 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    Ready to withdraw to your bank account
+                                </p>
                             </div>
-
-                            <div className="relative z-10 mt-6">
+                            
+                            <div className="min-w-[200px]">
                                 <button
                                     onClick={() => setWithdrawModalOpen(true)}
                                     disabled={!hasBankDetails}
-                                    className={`w-full py-3 rounded-xl font-bold shadow-sm transition flex items-center justify-center ${hasBankDetails
+                                    className={`w-full py-4 rounded-2xl font-bold shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 ${hasBankDetails
                                         ? 'bg-white text-indigo-700 hover:bg-indigo-50'
-                                        : 'bg-white/20 text-white/50 cursor-not-allowed'
+                                        : 'bg-white/10 text-white/40 cursor-not-allowed border border-white/10'
                                         }`}
                                 >
-                                    {hasBankDetails ? 'Withdraw Funds' : 'Set Bank Details First'}
+                                    {hasBankDetails ? (
+                                        <>
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            Withdraw Funds
+                                        </>
+                                    ) : 'Complete Settings First'}
                                 </button>
                             </div>
-                            {/* Decorative Patterns */}
-                            <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-xl"></div>
                         </div>
+                        {/* Decorative Patterns */}
+                        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+                        <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-indigo-400/20 rounded-full blur-2xl"></div>
                     </div>
                 </div>
 
