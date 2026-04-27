@@ -37,6 +37,26 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
         });
     };
 
+    // Additional Payment Approval Modal State
+    const [confirmingAdditional, setConfirmingAdditional] = useState(false);
+    const [selectedAdditionalOrder, setSelectedAdditionalOrder] = useState(null);
+
+    const confirmAdditionalApprove = (order) => {
+        setSelectedAdditionalOrder(order);
+        setConfirmingAdditional(true);
+    };
+
+    const closeAdditionalModal = () => {
+        setConfirmingAdditional(false);
+        setSelectedAdditionalOrder(null);
+    };
+
+    const approveAdditionalOrder = () => {
+        post(route('admin.orders.approve_additional', selectedAdditionalOrder.id), {
+            onSuccess: () => closeAdditionalModal(),
+        });
+    };
+
     const [viewingOrder, setViewingOrder] = useState(null);
 
     const openDetails = (order) => {
@@ -244,11 +264,7 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                                                 )}
                                                 <PrimaryButton
                                                     className="flex-1 justify-center bg-emerald-600 hover:bg-emerald-700"
-                                                    onClick={() => {
-                                                        if (confirm('Approve additional payment?')) {
-                                                            post(route('admin.orders.approve_additional', order.id));
-                                                        }
-                                                    }}
+                                                    onClick={() => confirmAdditionalApprove(order)}
                                                 >
                                                     Approve
                                                 </PrimaryButton>
@@ -306,11 +322,7 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                                                     <td className="px-6 py-4">
                                                         <PrimaryButton
                                                             className="bg-emerald-600 hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-800"
-                                                            onClick={() => {
-                                                                if (confirm('Approve additional payment?')) {
-                                                                    post(route('admin.orders.approve_additional', order.id));
-                                                                }
-                                                            }}
+                                                            onClick={() => confirmAdditionalApprove(order)}
                                                         >
                                                             Approve
                                                         </PrimaryButton>
@@ -364,6 +376,28 @@ export default function Verify({ auth, orders, additionalPaymentOrders }) {
                                 ? 'Approve Proposal'
                                 : 'Approve Payment'
                             }
+                        </PrimaryButton>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Additional Approval Modal */}
+            <Modal show={confirmingAdditional} onClose={closeAdditionalModal}>
+                <div className="p-6">
+                    <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                        Approve Additional Payment?
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        Apakah Anda yakin ingin menyetujui pembayaran tambahan untuk Order <span className="font-bold">{selectedAdditionalOrder?.order_number}</span> sebesar <span className="font-bold text-orange-600">Rp {selectedAdditionalOrder ? new Intl.NumberFormat('id-ID').format(selectedAdditionalOrder.additional_revision_fee > 0 ? selectedAdditionalOrder.additional_revision_fee : Math.max(0, (selectedAdditionalOrder.revision_count - (selectedAdditionalOrder.package?.max_revisions ?? 3))) * 20000) : 0}</span>?
+                    </p>
+                    <div className="mt-6 flex justify-end gap-3">
+                        <SecondaryButton onClick={closeAdditionalModal}>Cancel</SecondaryButton>
+                        <PrimaryButton
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={approveAdditionalOrder}
+                            disabled={processing}
+                        >
+                            Approve
                         </PrimaryButton>
                     </div>
                 </div>

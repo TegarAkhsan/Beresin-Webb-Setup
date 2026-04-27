@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import useAutoReload from '@/Hooks/useAutoReload';
 
 const BANKS = [
     { key: 'BCA',     label: 'BCA',     va: '8801234567890', color: 'blue' },
@@ -10,6 +11,13 @@ const BANKS = [
 ];
 
 export default function AdditionalPayment({ auth, order, qris_image, whatsapp_number }) {
+    useAutoReload(['order'], 10_000);
+
+    useEffect(() => {
+        if (order.additional_payment_status === 'paid') {
+            router.visit(route('orders.review', order.id));
+        }
+    }, [order.additional_payment_status, order.id]);
     const maxRevisions   = order.package?.max_revisions ?? 3;
     const extraCount     = Math.max(
         order.additional_revision_fee > 0 ? Math.round(order.additional_revision_fee / 20000) : 0,
