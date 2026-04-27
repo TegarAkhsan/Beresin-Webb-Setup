@@ -28,6 +28,10 @@ export default function SettingsIndex({ auth, settings }) {
         whatsapp_number: settings.whatsapp_number || '6281234567890',
         invoice_logo: null,
         qris_image: null,
+        payment_va: settings.payment_va ? JSON.parse(settings.payment_va) : [
+            { bank: 'BCA', number: '8801234567890', holder: 'Beresin Admin' },
+            { bank: 'Mandiri', number: '8901234567890', holder: 'Beresin Admin' },
+        ],
     });
 
     const [activeTab, setActiveTab] = useState('general');
@@ -52,6 +56,22 @@ export default function SettingsIndex({ auth, settings }) {
         }
     }, [data.qris_image]);
 
+    const addVa = () => {
+        setData('payment_va', [...data.payment_va, { bank: '', number: '', holder: '' }]);
+    };
+
+    const removeVa = (index) => {
+        const newVa = [...data.payment_va];
+        newVa.splice(index, 1);
+        setData('payment_va', newVa);
+    };
+
+    const updateVa = (index, field, value) => {
+        const newVa = [...data.payment_va];
+        newVa[index][field] = value;
+        setData('payment_va', newVa);
+    };
+
     const submit = (e) => {
         e.preventDefault();
         post(route('admin.settings.update'), {
@@ -67,6 +87,7 @@ export default function SettingsIndex({ auth, settings }) {
         { id: 'general', label: 'General Settings' },
         { id: 'logo', label: 'Logo Configuration' },
         { id: 'qris', label: 'QRIS Payment' },
+        { id: 'va', label: 'VA Payment' },
     ];
 
     return (
@@ -214,43 +235,71 @@ export default function SettingsIndex({ auth, settings }) {
                                         </div>
                                     )}
 
-                                    {/* QRIS TAB */}
-                                    {activeTab === 'qris' && (
+                                    {/* VA TAB */}
+                                    {activeTab === 'va' && (
                                         <div className="space-y-6 animate-fade-in-up">
-                                            <h3 className="text-lg font-medium mb-4 pb-2 border-b">QRIS Payment Configuration</h3>
-
-                                            <div>
-                                                <InputLabel htmlFor="qris_image" value="Upload QRIS Image" />
-                                                <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:bg-gray-50 transition-colors">
-                                                    <div className="space-y-1 text-center">
-                                                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                                        </svg>
-                                                        <div className="flex text-sm text-gray-600">
-                                                            <label htmlFor="qris_image" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
-                                                                <span>Upload a file</span>
-                                                                <input id="qris_image" name="qris_image" type="file" className="sr-only" onChange={(e) => setData('qris_image', e.target.files[0])} accept="image/*" />
-                                                            </label>
-                                                            <p className="pl-1">or drag and drop</p>
-                                                        </div>
-                                                        <p className="text-xs text-gray-500">PNG, JPG, GIF up to 1MB</p>
-                                                    </div>
-                                                </div>
-                                                {data.qris_image && <p className="text-sm text-indigo-600 mt-2">Selected: {data.qris_image.name}</p>}
-                                                <InputError message={errors.qris_image} className="mt-2" />
+                                            <div className="flex justify-between items-center mb-4 pb-2 border-b">
+                                                <h3 className="text-lg font-medium">Virtual Account Configuration</h3>
+                                                <button
+                                                    type="button"
+                                                    onClick={addVa}
+                                                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                                >
+                                                    + Add New VA
+                                                </button>
                                             </div>
 
-                                            {(qrisPreview || settings.qris_image) && (
-                                                <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-                                                    <p className="text-sm text-gray-500 mb-2">{qrisPreview ? 'New QRIS Preview:' : 'Current QRIS Preview:'}</p>
-                                                    <div className="border p-2 bg-white rounded flex items-center justify-center">
-                                                        <img src={qrisPreview || getFileUrl(settings.qris_image)} alt="QRIS Preview" className="max-w-full h-48 object-contain" />
+                                            <div className="space-y-4">
+                                                {data.payment_va.length === 0 && (
+                                                    <p className="text-sm text-gray-500 italic py-4 text-center border-2 border-dashed rounded-lg">No Virtual Accounts configured. Customers will only see QRIS option if this is empty.</p>
+                                                )}
+                                                {data.payment_va.map((va, index) => (
+                                                    <div key={index} className="p-4 bg-gray-50 rounded-xl border relative group">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeVa(index)}
+                                                            className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity border border-red-200"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                        </button>
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                            <div>
+                                                                <InputLabel value="Bank Name" />
+                                                                <TextInput
+                                                                    className="mt-1 block w-full text-sm"
+                                                                    value={va.bank}
+                                                                    onChange={(e) => updateVa(index, 'bank', e.target.value)}
+                                                                    placeholder="e.g. BCA, Mandiri"
+                                                                    required
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <InputLabel value="Account Number" />
+                                                                <TextInput
+                                                                    className="mt-1 block w-full text-sm"
+                                                                    value={va.number}
+                                                                    onChange={(e) => updateVa(index, 'number', e.target.value)}
+                                                                    placeholder="VA or Account Number"
+                                                                    required
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <InputLabel value="Account Holder" />
+                                                                <TextInput
+                                                                    className="mt-1 block w-full text-sm"
+                                                                    value={va.holder}
+                                                                    onChange={(e) => updateVa(index, 'holder', e.target.value)}
+                                                                    placeholder="Name on account"
+                                                                    required
+                                                                />
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
+                                                ))}
+                                            </div>
 
                                             <div className="flex items-center gap-4 pt-4">
-                                                <PrimaryButton disabled={processing}>Save QRIS Settings</PrimaryButton>
+                                                <PrimaryButton disabled={processing}>Save VA Settings</PrimaryButton>
                                                 {recentlySuccessful && <p className="text-sm text-green-600">Saved.</p>}
                                             </div>
                                         </div>

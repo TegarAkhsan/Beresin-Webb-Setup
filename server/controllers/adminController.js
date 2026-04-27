@@ -673,13 +673,17 @@ export const settings = async (req, res) => {
 export const updateSettings = async (req, res) => {
     try {
         // Save text fields
-        const textFields = ['invoice_name', 'invoice_address', 'whatsapp_number'];
+        const textFields = ['invoice_name', 'invoice_address', 'whatsapp_number', 'payment_va'];
         for (const field of textFields) {
             if (req.body[field] !== undefined) {
+                let value = req.body[field];
+                if (typeof value === 'object') {
+                    value = JSON.stringify(value);
+                }
                 await prisma.settings.upsert({
                     where: { key: field },
-                    update: { value: String(req.body[field]) },
-                    create: { key: field, value: String(req.body[field]) }
+                    update: { value: String(value) },
+                    create: { key: field, value: String(value) }
                 });
             }
         }

@@ -8,7 +8,7 @@ import InputLabel from '@/Components/InputLabel';
 import { useState, useEffect } from 'react';
 import useAutoReload from '@/Hooks/useAutoReload';
 
-export default function Show({ auth, order, whatsapp_number, qris_image }) {
+export default function Show({ auth, order, whatsapp_number, qris_image, payment_va }) {
     // Silent background polling — 15s for active order pages so status updates fast
     useAutoReload(['order'], 15_000);
 
@@ -45,7 +45,9 @@ export default function Show({ auth, order, whatsapp_number, qris_image }) {
         // Untuk order negosiasi: selalu mulai dari 'va' agar customer bisa pilih bebas
         order.is_negotiation ? 'va' : (order.payment_method || 'va')
     );
-    const [selectedBank, setSelectedBank] = useState('BCA');
+    const [selectedBankIndex, setSelectedBankIndex] = useState(0);
+    const hasVa = payment_va && payment_va.length > 0;
+    const currentBank = hasVa ? payment_va[selectedBankIndex] : null;
     const [showAcceptModal, setShowAcceptModal] = useState(false);
     const [showRevisionModal, setShowRevisionModal] = useState(false);
     const [showPaymentWarningModal, setShowPaymentWarningModal] = useState(false);
@@ -258,6 +260,7 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
                                                     <button
                                                         onClick={() => setPaymentMethod('va')}
                                                         className={`flex-1 py-3 rounded-xl border-2 font-bold transition-all ${paymentMethod === 'va' ? 'border-slate-900 bg-yellow-400 text-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-900'}`}
+                                                        disabled={!hasVa}
                                                     >
                                                         Virtual Account
                                                     </button>
@@ -281,29 +284,36 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
 
                                                     <p className="mb-4 text-sm text-gray-600">Select Bank:</p>
                                                     <div className="flex gap-3 mb-6">
-                                                        {['BCA', 'Mandiri', 'BNI', 'BRI'].map(bank => (
+                                                        {payment_va.map((bank, idx) => (
                                                             <button
-                                                                key={bank}
-                                                                onClick={() => setSelectedBank(bank)}
-                                                                className={`px-4 py-2 rounded-xl border-2 text-sm font-black transition-all ${selectedBank === bank ? 'border-slate-900 bg-slate-900 text-white shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]' : 'border-slate-300 text-slate-600 hover:border-slate-900'}`}
+                                                                key={idx}
+                                                                onClick={() => setSelectedBankIndex(idx)}
+                                                                className={`px-4 py-2 rounded-xl border-2 text-sm font-black transition-all ${selectedBankIndex === idx ? 'border-slate-900 bg-slate-900 text-white shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]' : 'border-slate-300 text-slate-600 hover:border-slate-900'}`}
                                                             >
-                                                                {bank}
+                                                                {bank.bank}
                                                             </button>
                                                         ))}
                                                     </div>
 
                                                     <div className="bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-slate-400 text-center mb-6">
-                                                        <p className="text-gray-500 text-sm mb-2">Virtual Account Number ({selectedBank})</p>
+                                                        <p className="text-gray-500 text-sm mb-2">Virtual Account Number ({currentBank?.bank})</p>
                                                         <div className="flex items-center justify-center gap-2">
-                                                            <h2 className="text-3xl font-mono font-bold text-gray-800 tracking-wider">8801234567890</h2>
-                                                            <button className="text-indigo-600 hover:text-indigo-800 text-sm font-bold ml-2">COPY</button>
+                                                            <h2 className="text-3xl font-mono font-bold text-gray-800 tracking-wider">{currentBank?.number}</h2>
+                                                            <button 
+                                                               type="button"
+                                                               onClick={() => { navigator.clipboard.writeText(currentBank?.number); alert('Copied!'); }}
+                                                               className="text-indigo-600 hover:text-indigo-800 text-sm font-bold ml-2"
+                                                           >
+                                                               COPY
+                                                           </button>
                                                         </div>
+                                                        <p className="text-xs text-gray-400 mt-2">a.n. {currentBank?.holder || 'Beresin Admin'}</p>
                                                     </div>
 
                                                     <div className="text-sm text-gray-600 space-y-2">
                                                         <p className="font-bold">How to pay:</p>
                                                         <ol className="list-decimal list-inside space-y-1 ml-2">
-                                                            <li>Open your Mobile Banking app (m-Ranking).</li>
+                                                            <li>Open your Mobile Banking app (m-Banking) or ATM {currentBank?.bank}.</li>
                                                             <li>Select <strong>Payment</strong> or <strong>Transfer</strong> menu.</li>
                                                             <li>Choose <strong>Virtual Account</strong>.</li>
                                                             <li>Enter the VA number above.</li>
@@ -582,20 +592,23 @@ Mohon konfirmasi dan prosesnya. Terima kasih.`;
 
                                                                     <div className="pt-4 border-t border-dashed border-gray-300">
                                                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 text-center">Pilihan 2: Transfer Bank</p>
-                                                                        <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border">
-                                                                            <div>
-                                                                                <p className="text-[10px] font-black text-blue-600">BCA (VA)</p>
-                                                                                <p className="font-mono font-bold text-gray-800">8801234567890</p>
-                                                                            </div>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => { navigator.clipboard.writeText('8801234567890'); alert('Copied!'); }}
-                                                                                className="text-[10px] font-black text-gray-400 hover:text-gray-900 border border-gray-200 px-2 py-1 rounded"
-                                                                            >
-                                                                                COPY
-                                                                            </button>
+                                                                        <div className="space-y-2">
+                                                                           {payment_va.map((va, idx) => (
+                                                                               <div key={idx} className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border">
+                                                                                   <div>
+                                                                                       <p className="text-[10px] font-black text-blue-600">{va.bank}</p>
+                                                                                       <p className="font-mono font-bold text-gray-800">{va.number}</p>
+                                                                                   </div>
+                                                                                   <button
+                                                                                       type="button"
+                                                                                       onClick={() => { navigator.clipboard.writeText(va.number); alert('Copied!'); }}
+                                                                                       className="text-[10px] font-black text-gray-400 hover:text-gray-900 border border-gray-200 px-2 py-1 rounded"
+                                                                                   >
+                                                                                       COPY
+                                                                                   </button>
+                                                                               </div>
+                                                                           ))}
                                                                         </div>
-                                                                        <p className="text-[10px] text-gray-400 mt-1 text-center font-bold">a.n. Beresin Admin</p>
                                                                     </div>
                                                                 </div>
 

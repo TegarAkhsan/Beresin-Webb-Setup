@@ -242,7 +242,7 @@ export const show = async (req, res) => {
         }
 
         const settingsRaw = await prisma.settings.findMany({
-            where: { key: { in: ['whatsapp_number', 'qris_image'] } }
+            where: { key: { in: ['whatsapp_number', 'qris_image', 'payment_va'] } }
         });
         const settings = settingsRaw.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
 
@@ -295,6 +295,7 @@ export const show = async (req, res) => {
             },
             whatsapp_number: settings.whatsapp_number || null,
             qris_image: settings.qris_image || null,
+            payment_va: settings.payment_va ? JSON.parse(settings.payment_va) : [],
             flash: { message: req.query.message || null }
         });
 
@@ -413,7 +414,7 @@ export const review = async (req, res) => {
         }
 
         const settingsRaw = await prisma.settings.findMany({
-            where: { key: { in: ['whatsapp_number', 'qris_image'] } }
+            where: { key: { in: ['whatsapp_number', 'qris_image', 'payment_va'] } }
         });
         const settings = settingsRaw.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
         const serialized = serializeOrder(order);
@@ -476,6 +477,7 @@ export const review = async (req, res) => {
             },
             whatsapp_number: settings.whatsapp_number || null,
             qris_image: settings.qris_image || null,
+            payment_va: settings.payment_va ? JSON.parse(settings.payment_va) : [],
         });
     } catch (error) {
         console.error('Order Review Error', error);
@@ -712,7 +714,7 @@ export const showAdditionalPayment = async (req, res) => {
         }
 
         const settingsRaw = await prisma.settings.findMany({
-            where: { key: { in: ['whatsapp_number', 'qris_image'] } }
+            where: { key: { in: ['whatsapp_number', 'qris_image', 'payment_va'] } }
         });
         const settings = settingsRaw.reduce((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
 
@@ -741,6 +743,7 @@ export const showAdditionalPayment = async (req, res) => {
             },
             whatsapp_number: settings.whatsapp_number || null,
             qris_image: settings.qris_image || null,
+            payment_va: settings.payment_va ? JSON.parse(settings.payment_va) : [],
         });
     } catch (error) {
         console.error('Order Show Additional Payment Error', error);

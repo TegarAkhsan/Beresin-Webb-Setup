@@ -3,14 +3,17 @@ import { Head, useForm, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import useAutoReload from '@/Hooks/useAutoReload';
 
-const BANKS = [
-    { key: 'BCA',     label: 'BCA',     va: '8801234567890', color: 'blue' },
-    { key: 'Mandiri', label: 'Mandiri', va: '8901234567890', color: 'yellow' },
-    { key: 'BNI',     label: 'BNI',     va: '8701234567890', color: 'orange' },
-    { key: 'BRI',     label: 'BRI',     va: '8601234567890', color: 'indigo' },
-];
+// Dynamic BANKS will come from props.payment_va
+const getBankColor = (bankName) => {
+    const name = (bankName || '').toLowerCase();
+    if (name.includes('bca')) return 'blue';
+    if (name.includes('mandiri')) return 'yellow';
+    if (name.includes('bni')) return 'orange';
+    if (name.includes('bri')) return 'indigo';
+    return 'slate';
+};
 
-export default function AdditionalPayment({ auth, order, qris_image, whatsapp_number }) {
+export default function AdditionalPayment({ auth, order, qris_image, whatsapp_number, payment_va }) {
     useAutoReload(['order'], 10_000);
 
     useEffect(() => {
@@ -27,8 +30,8 @@ export default function AdditionalPayment({ auth, order, qris_image, whatsapp_nu
         ? order.additional_revision_fee
         : extraCount * 20000;
 
-    const [method, setMethod]     = useState('qris');       // 'qris' | 'va'
-    const [selectedBank, setBank] = useState('BCA');
+    const [method, setMethod]     = useState(qris_image ? 'qris' : 'va'); // 'qris' | 'va'
+    const [selectedBankIndex, setSelectedBankIndex] = useState(0);
     const [copied, setCopied]     = useState(false);
     const [uploading, setUploading] = useState(false);
 
@@ -77,7 +80,8 @@ export default function AdditionalPayment({ auth, order, qris_image, whatsapp_nu
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const currentBank = BANKS.find(b => b.key === selectedBank) || BANKS[0];
+    const currentBank = (payment_va && payment_va.length > 0) ? payment_va[selectedBankIndex] : null;
+    const hasVa = payment_va && payment_va.length > 0;
 
     // Already submitted — show waiting screen
     if (order.additional_payment_status === 'pending_verification') {
@@ -179,13 +183,13 @@ export default function AdditionalPayment({ auth, order, qris_image, whatsapp_nu
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 3.5V16M3 3h5v5H3V3zm13 0h5v5h-5V3zM3 16h5v5H3v-5z"/>
                                     </svg>
-                                )},
+                                ), show: !!qris_image },
                                 { key: 'va',   label: 'Transfer Bank / VA', icon: (
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                                     </svg>
-                                )},
-                            ].map(m => (
+                                ), show: hasVa },
+                            ].filter(m => m.show).map(m => (
                                 <button
                                     key={m.key}
                                     onClick={() => setMethod(m.key)}
@@ -250,17 +254,17 @@ export default function AdditionalPayment({ auth, order, qris_image, whatsapp_nu
                                 {/* Bank Selector */}
                                 <p className="text-sm text-slate-500 mb-3">Pilih Bank:</p>
                                 <div className="flex flex-wrap gap-2 mb-5">
-                                    {BANKS.map(bank => (
+                                    {payment_va.map((bank, idx) => (
                                         <button
-                                            key={bank.key}
-                                            onClick={() => setBank(bank.key)}
+                                            key={idx}
+                                            onClick={() => setSelectedBankIndex(idx)}
                                             className={`px-4 py-2 rounded-xl border-2 text-sm font-black transition-all ${
-                                                selectedBank === bank.key
+                                                selectedBankIndex === idx
                                                     ? 'border-slate-900 bg-slate-900 text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
                                                     : 'border-slate-200 text-slate-600 hover:border-slate-900'
                                             }`}
                                         >
-                                            {bank.label}
+                                            {bank.bank}
                                         </button>
                                     ))}
                                 </div>
@@ -268,11 +272,11 @@ export default function AdditionalPayment({ auth, order, qris_image, whatsapp_nu
                                 {/* VA Number Display */}
                                 <div className="bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 p-6 text-center mb-5">
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                                        Nomor Virtual Account ({currentBank.label})
+                                        Nomor Virtual Account ({currentBank?.bank})
                                     </p>
-                                    <p className="font-mono text-3xl font-bold text-slate-900 tracking-widest mb-3">{currentBank.va}</p>
+                                    <p className="font-mono text-3xl font-bold text-slate-900 tracking-widest mb-3">{currentBank?.number}</p>
                                     <button
-                                        onClick={() => handleCopy(currentBank.va)}
+                                        onClick={() => handleCopy(currentBank?.number)}
                                         className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all border ${
                                             copied
                                                 ? 'bg-green-100 text-green-700 border-green-300'
@@ -285,14 +289,14 @@ export default function AdditionalPayment({ auth, order, qris_image, whatsapp_nu
                                             <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>Salin Nomor VA</>
                                         )}
                                     </button>
-                                    <p className="text-xs text-slate-400 mt-2">a.n. Beresin Admin</p>
+                                    <p className="text-xs text-slate-400 mt-2">a.n. {currentBank?.holder || 'Beresin Admin'}</p>
                                 </div>
 
                                 {/* Steps */}
                                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 text-sm text-slate-600">
                                     <p className="font-bold text-slate-700 mb-2">Cara Bayar:</p>
                                     <ol className="list-decimal list-inside space-y-1 ml-1">
-                                        <li>Buka Mobile Banking / ATM {currentBank.label}.</li>
+                                        <li>Buka Mobile Banking / ATM {currentBank?.bank}.</li>
                                         <li>Pilih menu <strong>Transfer</strong> atau <strong>Bayar</strong>.</li>
                                         <li>Pilih <strong>Virtual Account</strong>.</li>
                                         <li>Masukkan nomor VA di atas.</li>
