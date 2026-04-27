@@ -184,26 +184,12 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                                             </span>
                                             <span className="text-xs text-gray-400 block">{extraRevisionCount} revisi × Rp 20.000</span>
                                         </div>
-                                        {order.additional_payment_status === 'pending' ? (
+                                        {order.additional_payment_status === 'pending' && (
                                             <div className="inline-flex items-center gap-2 bg-yellow-100 text-yellow-800 font-bold text-sm px-4 py-2 rounded-full border border-yellow-300">
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                                 Sedang Diverifikasi Admin
                                             </div>
-                                        ) : (
-                                            <button
-                                                onClick={() => router.visit(route('orders.additional-payment.show', order.id))}
-                                                className="inline-flex items-center gap-2 bg-orange-600 text-white font-black text-sm px-5 py-2.5 rounded-xl border-2 border-orange-800 shadow-[3px_3px_0px_0px_rgba(154,52,18,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                                                Bayar Sekarang
-                                            </button>
                                         )}
-                                        <button
-                                            onClick={() => setShowPaymentBanner(false)}
-                                            className="text-orange-400 hover:text-orange-600 text-xs font-bold"
-                                        >
-                                            Tutup
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -458,7 +444,7 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                                         onClick={() => {
                                             // Payment gate: if there are unpaid revision fees, go to payment page first
                                             if (hasUnpaidRevisionFee) {
-                                                router.visit(route('orders.additional-payment.show', order.id));
+                                                window.location.href = route('orders.additional-payment.show', order.id);
                                                 return;
                                             }
                                             if (order.milestones && order.milestones.length > 0) {
@@ -480,7 +466,7 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                                         {hasUnpaidRevisionFee ? (
                                             <>
                                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                                                Bayar Biaya tambahan dan terima hasil
+                                                Bayar Biaya Tambahan
                                             </>
                                         ) : (
                                             <>
@@ -677,7 +663,7 @@ export default function Review({ auth, order, whatsapp_number, qris_image }) {
                             onSuccess: () => {
                                 resetRevision();
                                 if (isPaid) {
-                                    router.visit(route('orders.additional-payment.show', order.id));
+                                    window.location.href = route('orders.additional-payment.show', order.id);
                                 } else {
                                     setModalType(null);
                                 }
