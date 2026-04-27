@@ -682,7 +682,7 @@ export const uploadAdditionalPayment = async (req, res) => {
             }
         });
 
-        return flashRedirect(res, `/orders/${order.order_number}`, 'Bukti pembayaran tambahan berhasil dikirim.');
+        return flashRedirect(res, `/orders/${order.order_number}/additional-payment`, 'Bukti pembayaran tambahan berhasil dikirim.');
     } catch (error) {
         console.error('Additional Payment Error', error);
         return flashRedirect(res, `/orders/${id}`, 'Gagal mengupload bukti pembayaran', true);

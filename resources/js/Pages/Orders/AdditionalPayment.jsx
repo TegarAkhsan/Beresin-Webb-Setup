@@ -72,7 +72,7 @@ export default function AdditionalPayment({ auth, order, qris_image, whatsapp_nu
     const currentBank = BANKS.find(b => b.key === selectedBank) || BANKS[0];
 
     // Already submitted — show waiting screen
-    if (order.additional_payment_status === 'pending') {
+    if (order.additional_payment_status === 'pending_verification') {
         return (
             <AuthenticatedLayout user={auth.user}
                 header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Pelunasan Revisi — Order #{order.order_number}</h2>}
@@ -203,7 +203,11 @@ export default function AdditionalPayment({ auth, order, qris_image, whatsapp_nu
                                 <div className="flex justify-center mb-4">
                                     <div className="bg-white border-2 border-slate-900 inline-block p-5 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                                         {qris_image ? (
-                                            <img src={`/storage/${qris_image}`} alt="QRIS" className="w-52 h-auto mx-auto rounded-lg" />
+                                            <img 
+                                                src={qris_image.startsWith('http') ? qris_image : `/storage/${qris_image}`} 
+                                                alt="QRIS" 
+                                                className="w-52 h-auto mx-auto rounded-lg" 
+                                            />
                                         ) : (
                                             <div className="flex flex-col items-center justify-center w-48 h-48 bg-gray-100 rounded-lg">
                                                 <svg className="w-12 h-12 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -318,13 +322,14 @@ export default function AdditionalPayment({ auth, order, qris_image, whatsapp_nu
                                                     </svg>
                                                 </div>
                                                 <p className="font-bold text-slate-600 group-hover:text-orange-600 transition-colors">Klik atau drag file ke sini</p>
-                                                <p className="text-xs text-slate-400">JPG, PNG, PDF • Maks 5MB</p>
+                                                <p className="text-xs text-slate-400 font-medium">Foto, Gambar, PDF • Maks 5MB</p>
                                             </div>
                                         )}
                                     </div>
                                     <input
                                         type="file"
-                                        accept="image/jpeg,image/png,application/pdf"
+                                        accept="image/*,application/pdf"
+                                        capture="environment"
                                         className="hidden"
                                         onChange={handleFileChange}
                                     />
