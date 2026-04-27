@@ -3,6 +3,14 @@ import { uploadToStorage } from '../lib/storage.js';
 import bcrypt from 'bcryptjs';
 
 const generateInvoiceNumber = () => 'INV-' + Math.random().toString(36).substring(2, 12).toUpperCase();
+ 
+const calculateJokiCommission = (order) => {
+    const baseShare = Number(order.base_price || 0) * 0.65;
+    const rushShare = Number(order.rush_fee || 0) * 0.80;
+    const additionalShare = Number(order.additional_revision_fee || 0) * 0.65;
+    return baseShare + rushShare + additionalShare;
+};
+
 
 const flashRedirect = (res, url, message, isError = false) => {
     const cookieName = isError ? 'flash_error' : 'flash_success';
@@ -67,8 +75,13 @@ export const index = async (req, res) => {
             payoutRequests: payoutRequestsRaw.map(p => ({
                 ...p,
                 amount: Number(p.amount || 0),
+                bank_details_snapshot: p.bank_details_snapshot ? JSON.parse(p.bank_details_snapshot) : null,
                 user: p.users,
-                orders: p.orders.map(o => ({ ...o, package: o.packages }))
+                orders: p.orders.map(o => ({ 
+                    ...o, 
+                    package: o.packages,
+                    joki_commission: calculateJokiCommission(o)
+                }))
             }))
         });
     } catch (error) {
@@ -284,11 +297,15 @@ export const approveAdditionalPayment = async (req, res) => {
         const order = await prisma.orders.findUnique({ where: { id: parseInt(id) } });
         if (!order) return flashRedirect(res, '/admin/orders/verify', 'Order tidak ditemukan', true);
 
+        const additionalFee = Number(order.additional_revision_fee || 0);
+        const jokiAdditionalShare = additionalFee * 0.65;
+
         await prisma.orders.update({
             where: { id: parseInt(id) },
             data: {
                 additional_payment_status: 'paid',
-                amount: { increment: Number(order.additional_revision_fee || 0) },
+                amount: { increment: additionalFee },
+                joki_fee: { increment: jokiAdditionalShare },
                 updated_at: new Date()
             }
         });

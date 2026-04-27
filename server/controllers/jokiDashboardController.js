@@ -4,7 +4,8 @@ import { uploadToStorage } from '../lib/storage.js';
 const calculateJokiCommission = (order) => {
     const baseShare = Number(order.base_price || 0) * 0.65;
     const rushShare = Number(order.rush_fee || 0) * 0.80;
-    return baseShare + rushShare;
+    const additionalShare = Number(order.additional_revision_fee || 0) * 0.65;
+    return baseShare + rushShare + additionalShare;
 };
 
 const flashRedirect = (res, url, message, isError = false) => {
