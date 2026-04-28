@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import jwt from 'jsonwebtoken';
 import inertia from 'inertia-node';
 import path from 'path';
 import fs from 'fs';
@@ -152,14 +153,14 @@ app.get('/debug/packages', async (req, res) => {
 // Notification check endpoint (polled every 5s by AdminLayout & AuthenticatedLayout)
 app.get('/notifications/check', async (req, res) => {
     try {
-        const token = req.cookies?.auth_token;
+        const token = req.cookies?.token;
         if (!token) {
             return res.json({ unread_chats: 0, pending_orders: 0, new_tasks: 0 });
         }
-        const jwt = await import('jsonwebtoken');
+        
         let decoded;
         try {
-            decoded = jwt.default.verify(token, process.env.JWT_SECRET || 'secret');
+            decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecret');
         } catch (e) {
             return res.json({ unread_chats: 0, pending_orders: 0, new_tasks: 0 });
         }

@@ -26,6 +26,7 @@ export default function SettingsIndex({ auth, settings }) {
         invoice_name: settings.invoice_name || 'Beresin Jasa Digital',
         invoice_address: settings.invoice_address || 'Jalan Digital No. 1\nJakarta, Indonesia',
         whatsapp_number: settings.whatsapp_number || '6281234567890',
+        email_contact: settings.email_contact || 'admin@beresin.com',
         invoice_logo: null,
         qris_image: null,
         payment_va: settings.payment_va ? JSON.parse(settings.payment_va) : [
@@ -183,7 +184,20 @@ export default function SettingsIndex({ auth, settings }) {
                                                     required
                                                 />
                                                 <InputError message={errors.whatsapp_number} className="mt-2" />
-                                                <p className="text-xs text-gray-500 mt-1">Format: 628...</p>
+                                                <p className="text-xs text-gray-500 mt-1">Format: 628..</p>
+                                            </div>
+
+                                            <div>
+                                                <InputLabel htmlFor="email_contact" value="Contact Email" />
+                                                <TextInput
+                                                    id="email_contact"
+                                                    type="email"
+                                                    className="mt-1 block w-full"
+                                                    value={data.email_contact}
+                                                    onChange={(e) => setData('email_contact', e.target.value)}
+                                                    required
+                                                />
+                                                <InputError message={errors.email_contact} className="mt-2" />
                                             </div>
 
                                             <div className="flex items-center gap-4 pt-4">

@@ -748,7 +748,7 @@ export const settings = async (req, res) => {
 export const updateSettings = async (req, res) => {
     try {
         // Save text fields
-        const textFields = ['invoice_name', 'invoice_address', 'whatsapp_number', 'payment_va'];
+        const textFields = ['invoice_name', 'invoice_address', 'whatsapp_number', 'payment_va', 'email_contact'];
         for (const field of textFields) {
             if (req.body[field] !== undefined) {
                 let value = req.body[field];
