@@ -113,24 +113,18 @@ export default function Index({ auth, users, filters }) {
                                 </div>
 
                                 <div className="flex border-t border-gray-50 pt-3 gap-2">
-                                    <Link
-                                        href={route('admin.users.edit', user.id)}
-                                        className="flex-1 py-2 text-center text-xs font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
-                                    >
-                                        Edit
-                                    </Link>
                                     <button
                                         onClick={() => openBlacklistModal(user)}
-                                        className={`flex-1 py-2 text-center text-xs font-bold rounded-lg transition ${user.is_blacklisted
-                                            ? 'text-green-600 bg-green-50 hover:bg-green-100'
-                                            : 'text-slate-700 bg-slate-50 hover:bg-slate-100'
+                                        className={`flex-1 py-2 text-center text-xs font-bold rounded-lg transition shadow-sm ${user.is_blacklisted
+                                            ? 'text-green-700 bg-green-100 hover:bg-green-200'
+                                            : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
                                             }`}
                                     >
                                         {user.is_blacklisted ? 'Restore' : 'Blacklist'}
                                     </button>
                                     <button
                                         onClick={() => handleDelete(user.id)}
-                                        className="flex-1 py-2 text-center text-xs font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition"
+                                        className="flex-1 py-2 text-center text-xs font-bold text-red-700 bg-red-100 rounded-lg shadow-sm hover:bg-red-200 transition"
                                     >
                                         Delete
                                     </button>
@@ -185,21 +179,15 @@ export default function Index({ auth, users, filters }) {
                                             {new Date(user.created_at).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4 space-x-2">
-                                            <Link
-                                                href={route('admin.users.edit', user.id)}
-                                                className="font-medium text-blue-600 hover:underline"
-                                            >
-                                                Edit
-                                            </Link>
                                             <button
                                                 onClick={() => openBlacklistModal(user)}
-                                                className={`font-medium hover:underline ${user.is_blacklisted ? 'text-green-600' : 'text-slate-900'}`}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${user.is_blacklisted ? 'text-green-700 bg-green-100 hover:bg-green-200' : 'text-slate-700 bg-slate-100 hover:bg-slate-200'}`}
                                             >
                                                 {user.is_blacklisted ? 'Restore' : 'Blacklist'}
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(user.id)}
-                                                className="font-medium text-red-600 hover:underline"
+                                                className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm text-red-700 bg-red-100 hover:bg-red-200"
                                             >
                                                 Delete
                                             </button>

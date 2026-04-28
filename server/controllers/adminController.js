@@ -2,7 +2,6 @@ import { prisma } from '../app.js';
 import { uploadToStorage } from '../lib/storage.js';
 import bcrypt from 'bcryptjs';
 
-const generateInvoiceNumber = () => 'INV-' + Math.random().toString(36).substring(2, 12).toUpperCase();
  
 const calculateJokiCommission = (order) => {
     const baseShare = Number(order.base_price || 0) * 0.75;
@@ -165,7 +164,7 @@ export const approvePayment = async (req, res) => {
         } else {
             // Regular payment: admin approve bukti bayar → langsung ke queue assignment
             newStatus = 'pending_assignment';
-            extraData = { payment_status: 'paid', invoice_number: generateInvoiceNumber() };
+            extraData = { payment_status: 'paid', invoice_number: order.order_number.replace('ORD-', 'INV-') };
         }
 
         await prisma.orders.update({

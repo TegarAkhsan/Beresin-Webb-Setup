@@ -37,9 +37,10 @@ router.post('/admin/payouts/:id/reject', requireAuth, isAdmin, rejectPayout);
 router.get('/admin/users', requireAuth, isAdmin, users);
 router.get('/admin/users/create', requireAuth, isAdmin, createUser);
 router.post('/admin/users', requireAuth, isAdmin, storeUser);
-router.get('/admin/users/:id/edit', requireAuth, isAdmin, editUser);
-router.post('/admin/users/:id', requireAuth, isAdmin, updateUser);
+// router.get('/admin/users/:id/edit', requireAuth, isAdmin, editUser);
+// router.post('/admin/users/:id', requireAuth, isAdmin, updateUser);
 router.post('/admin/users/:id/delete', requireAuth, isAdmin, deleteUser);
+router.delete('/admin/users/:id', requireAuth, isAdmin, deleteUser);
 router.post('/admin/users/:id/blacklist', requireAuth, isAdmin, blacklistUser);
 
 // ─── Services ─────────────────────────────────────────────────────────────────

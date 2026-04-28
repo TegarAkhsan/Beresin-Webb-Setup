@@ -1,7 +1,26 @@
 import { prisma } from '../app.js';
 import { uploadToStorage } from '../lib/storage.js';
 
-const generateOrderNumber = () => 'ORD-' + Math.random().toString(36).substring(2, 12).toUpperCase();
+const generateOrderNumber = (serviceSlug = '') => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    
+    let type = 'OTH';
+    if (serviceSlug) {
+        const lower = serviceSlug.toLowerCase();
+        if (lower.includes('web')) type = 'WEB';
+        else if (lower.includes('ui') || lower.includes('ux')) type = 'UIUX';
+        else if (lower.includes('app') || lower.includes('mobile')) type = 'APP';
+        else if (lower.includes('data')) type = 'DATA';
+        else type = lower.substring(0, 4).toUpperCase();
+    }
+    
+    // Add a short random suffix to ensure uniqueness while keeping the requested format visible
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `ORD-${yyyy}${mm}${dd}P${type}-${randomSuffix}`;
+};
 
 const flashRedirect = (res, url, message, isError = false) => {
     res.cookie(isError ? 'flash_error' : 'flash_success', message);
@@ -96,7 +115,10 @@ export const store = async (req, res) => {
     } = req.body;
 
     try {
-        const pkg = await prisma.packages.findUnique({ where: { id: parseInt(package_id) } });
+        const pkg = await prisma.packages.findUnique({ 
+            where: { id: parseInt(package_id) },
+            include: { services: true }
+        });
         if (!pkg) {
             res.cookie('flash_error', 'Package not found.');
             return res.redirect('/orders/create' + (package_id ? `?package_id=${package_id}` : ''));
@@ -177,7 +199,7 @@ export const store = async (req, res) => {
         const now = new Date();
         const order = await prisma.orders.create({
             data: {
-                order_number: generateOrderNumber(),
+                order_number: generateOrderNumber(pkg.services?.slug),
                 user_id: req.user.id,
                 package_id: pkg.id,
                 amount,
@@ -513,7 +535,7 @@ export const downloadInvoice = async (req, res) => {
 <html lang="id">
 <head>
     <meta charset="utf-8">
-    <title>Invoice ${order.order_number}</title>
+    <title>Invoice ${order.invoice_number || order.order_number.replace('ORD-', 'INV-')}</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
         body { font-family: 'Inter', sans-serif; color: #1f2937; line-height: 1.5; margin: 0; padding: 40px; }
@@ -549,7 +571,7 @@ export const downloadInvoice = async (req, res) => {
             </div>
             <div style="text-align: right;">
                 <h1 class="invoice-title">INVOICE</h1>
-                <p style="font-size: 14px; font-weight: 700; margin: 5px 0;">#${order.order_number}</p>
+                <p style="font-size: 14px; font-weight: 700; margin: 5px 0;">#${order.invoice_number || order.order_number.replace('ORD-', 'INV-')}</p>
                 <div class="status-badge ${order.status === 'completed' || order.payment_status === 'paid' ? 'status-paid' : 'status-pending'}">
                     ${(order.payment_status || order.status).replace(/_/g, ' ')}
                 </div>
@@ -615,7 +637,7 @@ export const downloadInvoice = async (req, res) => {
 </html>`;
 
         res.setHeader('Content-Type', 'text/html');
-        res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.order_number}.html"`);
+        res.setHeader('Content-Disposition', `attachment; filename="invoice-${order.invoice_number || order.order_number.replace('ORD-', 'INV-')}.html"`);
         return res.send(html);
     } catch (error) {
         console.error('Invoice Error', error);

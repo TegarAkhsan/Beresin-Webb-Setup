@@ -111,6 +111,10 @@ export default function Show({ auth, order, whatsapp_number, qris_image, payment
     };
 
     const confirmViaWhatsapp = () => {
+        if (!whatsapp_number) {
+            alert('Nomor WhatsApp admin belum dikonfigurasi. Silakan hubungi admin secara manual.');
+            return;
+        }
         const message = `Halo Admin Beresin, saya telah melakukan pemesanan baru via Website.
 
 No Order: ${order.order_number}
@@ -119,7 +123,7 @@ Layanan: ${order.package.service.name}
 Paket: ${order.package.name}
 
 Mohon konfirmasi dan prosesnya. Terima kasih.`;
-        const targetNumber = whatsapp_number || '6281234567890';
+        const targetNumber = whatsapp_number.replace(/[^0-9]/g, '');
         const whatsappUrl = `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
     };

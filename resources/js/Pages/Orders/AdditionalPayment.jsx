@@ -369,14 +369,16 @@ export default function AdditionalPayment({ auth, order, qris_image, whatsapp_nu
                             <p className="text-center text-xs text-slate-400 mt-3">
                                 Setelah upload, admin akan memverifikasi dalam 1×24 jam. Anda juga dapat
                                 {' '}
-                                {whatsapp_number && (
+                                {whatsapp_number ? (
                                     <a
-                                        href={`https://wa.me/${whatsapp_number}?text=${encodeURIComponent(`Halo Admin, saya sudah upload bukti bayar revisi tambahan untuk order #${order.order_number}. Mohon segera diverifikasi.`)}`}
+                                        href={`https://wa.me/${whatsapp_number.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Halo Admin, saya sudah upload bukti bayar revisi tambahan untuk order #${order.order_number}. Mohon segera diverifikasi.`)}`}
                                         target="_blank"
                                         className="text-green-600 font-bold hover:underline"
                                     >
                                         konfirmasi via WhatsApp
                                     </a>
+                                ) : (
+                                    <span className="text-gray-500 italic">konfirmasi ke Admin</span>
                                 )}
                                 {' '}untuk mempercepat proses.
                             </p>
