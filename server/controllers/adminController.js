@@ -477,11 +477,52 @@ export const updateUser = async (req, res) => {
 
 export const deleteUser = async (req, res) => {
     const { id } = req.params;
+    const userId = parseInt(id);
     try {
-        await prisma.users.delete({ where: { id: parseInt(id) } });
-        return flashRedirect(res, '/admin/users', 'User berhasil dihapus');
+        await prisma.$transaction(async (tx) => {
+            // 1. Remove user as joki from any orders
+            await tx.orders.updateMany({
+                where: { joki_id: userId },
+                data: { joki_id: null }
+            });
+
+            // 2. Delete user's general chats, order chats, and reviews
+            await tx.chats.deleteMany({ where: { user_id: userId } });
+            await tx.order_chats.deleteMany({ where: { user_id: userId } });
+            await tx.reviews.deleteMany({ where: { user_id: userId } });
+            
+            // 2.5 Clean up payout requests (if user is joki)
+            const userPayouts = await tx.payout_requests.findMany({ where: { user_id: userId } });
+            if (userPayouts.length > 0) {
+                const payoutIds = userPayouts.map(p => p.id);
+                await tx.orders.updateMany({
+                    where: { payout_request_id: { in: payoutIds } },
+                    data: { payout_request_id: null }
+                });
+                await tx.payout_requests.deleteMany({ where: { user_id: userId } });
+            }
+
+            // 3. Find orders owned by this user
+            const userOrders = await tx.orders.findMany({ where: { user_id: userId } });
+            if (userOrders.length > 0) {
+                const orderIds = userOrders.map(o => o.id);
+                // Clean up order children
+                await tx.order_chats.deleteMany({ where: { order_id: { in: orderIds } } });
+                await tx.order_files.deleteMany({ where: { order_id: { in: orderIds } } });
+                await tx.order_milestones.deleteMany({ where: { order_id: { in: orderIds } } });
+                await tx.reviews.deleteMany({ where: { order_id: { in: orderIds } } });
+                // Finally delete the orders
+                await tx.orders.deleteMany({ where: { user_id: userId } });
+            }
+
+            // 4. Delete the user
+            await tx.users.delete({ where: { id: userId } });
+        });
+        
+        return flashRedirect(res, '/admin/users', 'User beserta data terkait berhasil dihapus');
     } catch (error) {
-        return flashRedirect(res, '/admin/users', 'Gagal menghapus user: ' + error.message, true);
+        console.error('[DELETE USER ERROR]', error);
+        return flashRedirect(res, '/admin/users', 'Gagal menghapus user: Data terkait tidak bisa dihapus', true);
     }
 };
 
